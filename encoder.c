@@ -2,6 +2,7 @@
 #include "xed/xed-decoded-inst-api.h"
 #include "xed/xed-encode.h"
 #include "xed/xed-error-enum.h"
+#include "xed/xed-iclass-enum.h"
 #include "xed/xed-iform-enum.h"
 #include "xed/xed-inst.h"
 #include "xed/xed-operand-enum.h"
@@ -58,7 +59,6 @@ static void encode_vmovss_xmmdq_memd(xed_encoder_request_t *req, xed_decoded_ins
     exit(1);
   }
 
-  
   xed_encoder_request_set_effective_operand_width(req, xed_decoded_inst_get_operand_width(xedd));
 
   xed_encoder_request_set_base0(req, xed_decoded_inst_get_base_reg(xedd,0));
@@ -77,12 +77,67 @@ static void encode_vmovss_xmmdq_memd(xed_encoder_request_t *req, xed_decoded_ins
   xed3_operand_set_vl(req, xed3_operand_get_vl(xedd));
 }
 
+static void encode_vxorps_xmmdq_xmmdq_xmmdq(xed_encoder_request_t *req, xed_decoded_inst_t *xedd) {
+  // Set the machine mode for encoder
+  xed_encoder_request_zero_set_mode(req, &dstate);
+  // set iclass for encoder
+  xed_encoder_request_set_iclass(req, XED_ICLASS_XORPS);
+
+  const xed_inst_t *xi = xed_decoded_inst_inst(xedd);
+  uint32_t noperands = xed_inst_noperands(xi);
+  assert(noperands == 3);
+
+  // Decode operand 0
+  const xed_operand_t *op0 = xed_inst_operand(xi, 0);
+  const xed_operand_enum_t op_name0 = xed_operand_name(op0);
+  const xed_reg_enum_t r0 = xed_decoded_inst_get_reg(xedd, op_name0);
+  if (r0 < XED_REG_XMM0 && r0 > XED_REG_XMM31) {
+    printf("Unsupported register: %s", xed_reg_enum_t2str(r0));
+    exit(1);
+  }
+
+  // Decode operand 1
+  const xed_operand_t *op1 = xed_inst_operand(xi, 1);
+  const xed_operand_enum_t op_name1 = xed_operand_name(op1);
+  const xed_reg_enum_t r1 = xed_decoded_inst_get_reg(xedd, op_name1);
+  if (r1 < XED_REG_XMM0 && r1 > XED_REG_XMM31) {
+    printf("Unsupported register: %s", xed_reg_enum_t2str(r1));
+    exit(1);
+  }
+
+  // Decode operand 2
+  const xed_operand_t *op2 = xed_inst_operand(xi, 2);
+  const xed_operand_enum_t op_name2 = xed_operand_name(op2);
+  const xed_reg_enum_t r2 = xed_decoded_inst_get_reg(xedd, op_name2);
+  if (r2 < XED_REG_XMM0 && r2 > XED_REG_XMM31) {
+    printf("Unsupported register: %s", xed_reg_enum_t2str(r1));
+    exit(1);
+  }
+
+  if (r0 != r1) {
+    printf("Having different op0 and op1 is not supported");
+    exit(1);
+  }
+
+  xed_encoder_request_set_reg(req, op_name0, r0);
+  xed_encoder_request_set_operand_order(req, 0, op_name0);
+
+  xed_encoder_request_set_reg(req, op_name1, r2);
+  xed_encoder_request_set_operand_order(req, 1, op_name1);
+
+  xed_encoder_request_set_effective_operand_width(req, xed_decoded_inst_get_operand_width(xedd));
+  xed3_operand_set_vl(req, xed3_operand_get_vl(xedd));
+}
+
 void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer, const unsigned int ilen, unsigned int *olen) {
   xed_iform_enum_t iform = xed_decoded_inst_get_iform_enum(xedd);
   xed_encoder_request_t req;
   switch (iform) {
   case XED_IFORM_VMOVSS_XMMdq_MEMd:
     encode_vmovss_xmmdq_memd(&req, xedd);
+    break;
+  case XED_IFORM_VXORPS_XMMdq_XMMdq_XMMdq:
+    encode_vxorps_xmmdq_xmmdq_xmmdq(&req, xedd);
     break;
   default:
     printf("encoder: Unknown instruction");
@@ -91,7 +146,7 @@ void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer, const unsigne
   
   xed_error_enum_t err = xed_encode(&req, buffer, ilen, olen);
   if (err != XED_ERROR_NONE) {
-    printf("Error: %s", xed_error_enum_t2str(err));
+    printf("Encoder error: %s\n", xed_error_enum_t2str(err));
     exit(1);
   }
 }

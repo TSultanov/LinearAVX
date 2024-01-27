@@ -377,6 +377,7 @@ void decode_instruction(unsigned char *inst, xed_decoded_inst_t *xedd, uint32_t 
 
 void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     ucontext_t *uc = (ucontext_t *)ucontext;
+    printf("\n========================\n");
     printf("Invalid instruction at %p\n", info->si_addr);
     printf("RIP: %llx\n", uc->uc_mcontext->__ss.__rip);
     printf("RSP: %llx\n", uc->uc_mcontext->__ss.__rsp);
@@ -420,7 +421,7 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     //     printf("task_for_pid failed: %d\n", kret);
     //     exit(1);
     // }
-    kern_return_t kret = vm_protect(current_task(), (vm_address_t)info->si_addr, initial_olen, FALSE, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_ALL);
+    kern_return_t kret = vm_protect(current_task(), (vm_address_t)info->si_addr, initial_olen, FALSE, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE | VM_PROT_ALL);
     if (kret != KERN_SUCCESS) {
         printf("vm_protect failed: %d\n", kret);
         exit(1);
@@ -432,11 +433,11 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
         memset(info->si_addr + (initial_olen - olen), 0x90, initial_olen - olen);
     }
     printf("Copy OK\n");
-    kret = vm_protect(task, (vm_address_t)info->si_addr, initial_olen, FALSE, VM_PROT_READ | VM_PROT_EXECUTE | VM_PROT_ALL);
-    if (kret != KERN_SUCCESS) {
-        printf("vm_protect failed: %d\n", kret);
-        exit(1);
-    }
+    // kret = vm_protect(task, (vm_address_t)info->si_addr, initial_olen, FALSE, VM_PROT_READ | VM_PROT_EXECUTE | VM_PROT_ALL);
+    // if (kret != KERN_SUCCESS) {
+    //     printf("vm_protect failed: %d\n", kret);
+    //     exit(1);
+    // }
 }
 
 #define DYLD_INTERPOSE(_replacment,_replacee) \
