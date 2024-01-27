@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <immintrin.h>
 #include <stdio.h>
 

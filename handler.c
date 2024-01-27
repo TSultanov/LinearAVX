@@ -4,20 +4,31 @@
 #include <mach/mach_traps.h>
 #include <mach/vm_map.h>
 #include <signal.h>
+#include <sys/signal.h>
 #include <stdio.h>
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/signal.h>
+#include <unistd.h>
 #include <xed/xed-interface.h>
 #include "handler.h"
 #include "xed/xed-decoded-inst-api.h"
 #include "xed/xed-init.h"
 #include "encoder.h"
+#include <libproc.h>
 
 void hello(void)
 {
     printf("Avxhandler loaded\n");
+    struct proc_bsdshortinfo info;
+    pid_t pid = getpid(); // Get the PID of the current process
+
+    if (proc_pidinfo(pid, PROC_PIDT_SHORTBSDINFO, 0, &info, sizeof(info)) > 0) {
+        printf("Current process name: %s\n", info.pbsi_comm);
+    } else {
+        printf("Failed to get process name.\n");
+    }
 }
 
 void print_memops(xed_decoded_inst_t* xedd) {
@@ -428,18 +439,35 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     }
 }
 
+#define DYLD_INTERPOSE(_replacment,_replacee) \
+  __attribute__((used)) static struct{ const void* replacment; const void* replacee; } _interpose_##_replacee \
+  __attribute__ ((section ("__DATA,__interpose"))) = { (const void*)(unsigned long)&_replacment, (const void*)(unsigned long)    &_replacee };
+
+int	mysigaction(int signum, const struct sigaction * __restrict act, struct sigaction * __restrict oldact) {
+    if (signum != SIGILL) {
+        printf("sigaction: Installing handler for signal %d\n", signum);
+        return sigaction(signum, act, oldact);
+    }
+
+    return 0;
+}
+
+DYLD_INTERPOSE(mysigaction, sigaction);
+
 void init_sigill_handler(void) {
     struct sigaction act;
     memset (&act, '\0', sizeof(act));
     act.sa_sigaction = &sigill_handler;
     act.sa_flags = SA_SIGINFO;
-
     int res = sigaction(SIGILL, &act, NULL);
     if (res < 0) {
         perror("sigaction");
         exit(1);
     }
-    printf("SIGILL handler installed\n");
+}
+
+void sigtrap_handler(int sig, siginfo_t *info, void *ucontext) {
+    printf("Recieved SIGTRAP");
 }
 
 __attribute__((constructor))
