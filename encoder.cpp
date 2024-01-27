@@ -1,11 +1,14 @@
 #include "encoder.h"
+#include "memmanager.h"
 #include "xed/xed-decoded-inst-api.h"
 #include "xed/xed-encode.h"
+#include "xed/xed-encoder-hl.h"
 #include "xed/xed-error-enum.h"
 #include "xed/xed-iclass-enum.h"
 #include "xed/xed-iform-enum.h"
 #include "xed/xed-inst.h"
 #include "xed/xed-operand-enum.h"
+#include "xed/xed-reg-enum.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,6 +16,59 @@
 
 const xed_state_t dstate = {.mmode = XED_MACHINE_MODE_LONG_64,
                             .stack_addr_width = XED_ADDRESS_WIDTH_64b};
+
+/* Common instruction requests */
+static xed_encoder_request_t encode_push(xed_reg_enum_t reg) {
+  xed_encoder_request_t req;
+  xed_encoder_instruction_t enc_inst;
+
+  xed_inst1(&enc_inst, dstate, XED_ICLASS_PUSH, 0, xed_reg(reg));
+
+  xed_convert_to_encoder_request(&req, &enc_inst);
+  return req;
+}
+
+static xed_encoder_request_t encode_mov_reg_mem(xed_reg_enum_t reg, uint64_t memory_address) {
+  xed_encoder_request_t req;
+  xed_encoder_instruction_t enc_inst;
+
+  xed_inst2(&enc_inst, dstate, XED_ICLASS_MOV, 0, xed_reg(reg), xed_imm0(memory_address, 64));
+
+  xed_convert_to_encoder_request(&req, &enc_inst);
+  return req;
+}
+
+static xed_encoder_request_t encode_pop(xed_reg_enum_t reg) {
+  xed_encoder_request_t req;
+  xed_encoder_instruction_t enc_inst;
+
+  xed_inst1(&enc_inst, dstate, XED_ICLASS_POP, 0, xed_reg(reg));
+
+  xed_convert_to_encoder_request(&req, &enc_inst);
+  return req;
+}
+
+static xed_encoder_request_t encode_ret() {
+  xed_encoder_request_t req;
+  xed_encoder_instruction_t enc_inst;
+
+  xed_inst0(&enc_inst, dstate, XED_ICLASS_RET_NEAR, 0);
+
+  xed_convert_to_encoder_request(&req, &enc_inst);
+  return req;
+}
+
+static xed_encoder_request_t encode_call(uint64_t addr, uint64_t rbp_value) {
+  xed_encoder_request_t req;
+  xed_encoder_instruction_t enc_inst;
+  auto disp = xed_disp(addr - rbp_value, 32);
+  xed_inst1(&enc_inst, dstate, XED_ICLASS_CALL_NEAR, 0, xed_mem_bd(XED_REG_RBP, disp, 64));
+
+  xed_convert_to_encoder_request(&req, &enc_inst);
+  return req;
+}
+
+/* AVX instruction */
 
 static void encode_vmovss_xmmdq_memd(xed_encoder_request_t *req, xed_decoded_inst_t *xedd) {
   // Set the machine mode for encoder
@@ -53,8 +109,6 @@ static void encode_vmovss_xmmdq_memd(xed_encoder_request_t *req, xed_decoded_ins
     xed_encoder_request_set_operand_order(req, 1, XED_OPERAND_MEM0);
     break;
   case XED_OPERAND_MEM1:
-    xed_encoder_request_set_operand_order(req, 1, XED_OPERAND_MEM1);
-    break;
   default:
     printf("Invalid operand: %s\n", xed_operand_enum_t2str(op_name1));
     exit(1);
@@ -130,10 +184,71 @@ static void encode_vxorps_xmmdq_xmmdq_xmmdq(xed_encoder_request_t *req, xed_deco
   xed3_operand_set_vl(req, xed3_operand_get_vl(xedd));
 }
 
-static void encode_vmovups_memqq_ymmqq(xed_encoder_request_t *req, xed_decoded_inst_t *xedd) {
+static void encode_vmovups_memqq_ymmqq(xed_encoder_request_t *req, xed_decoded_inst_t *xedd, uint64_t tid) {
   std::vector<xed_encoder_request_t> internal_requests;
+  const xed_inst_t *xi = xed_decoded_inst_inst(xedd);
 
-  
+  // Decode operand 1
+  const xed_operand_t *op1 = xed_inst_operand(xi, 1);
+  const xed_operand_enum_t op_name1 = xed_operand_name(op1);
+  const xed_reg_enum_t r1 = xed_decoded_inst_get_reg(xedd, op_name1);
+  if (r1 < XED_REG_YMM0 && r1 > XED_REG_YMM31) {
+    printf("Unsupported register: %s", xed_reg_enum_t2str(r1));
+    exit(1);
+  }
+
+  // Decode operand 0
+  const xed_operand_t *op0 = xed_inst_operand(xi, 0);
+  const xed_operand_enum_t op_name0 = xed_operand_name(op0);
+  const xed_reg_enum_t r0 = xed_decoded_inst_get_reg(xedd, op_name0);
+  if (r0 < XED_REG_YMM0 && r0 > XED_REG_YMM31) {
+    printf("Unsupported register: %s", xed_reg_enum_t2str(r0));
+    exit(1);
+  }
+
+  switch (op_name0) {
+  case XED_OPERAND_MEM0:
+    xed_encoder_request_set_mem0(req);
+    xed_encoder_request_set_operand_order(req, 0, XED_OPERAND_MEM0);
+    break;
+  case XED_OPERAND_MEM1:
+  default:
+    printf("Invalid operand: %s\n", xed_operand_enum_t2str(op_name0));
+    exit(1);
+  }
+
+  // movups [RBP + memaddr] xmm0
+  {
+    xed_encoder_request_t req;
+    xed_encoder_instruction_t enc_inst;
+
+    auto disp = xed_disp(
+      xed_decoded_inst_get_memory_displacement(xedd, 0), 
+      xed_decoded_inst_get_memory_displacement_width(xedd, 0));
+
+    auto bisd = xed_mem_bisd(
+      xed_decoded_inst_get_base_reg(xedd, 0),
+      xed_decoded_inst_get_index_reg(xedd, 0),
+      xed_decoded_inst_get_scale(xedd, 0),
+      disp,
+      128
+    );
+
+    xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVUPS, 0, bisd, xed_reg(r0));
+
+    xed_convert_to_encoder_request(&req, &enc_inst);
+    internal_requests.push_back(req);
+  }
+
+  // push rax
+  internal_requests.emplace_back(encode_push(XED_REG_RAX));
+
+  // push rbx
+  internal_requests.emplace_back(encode_push(XED_REG_RBX));
+
+  // mov rax <higher part of YMMx register>
+  ymm_upper_t* ymm_bank = get_ymm_for_thread(tid);
+  // no idea :(
 }
 
 void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer, const unsigned int ilen, unsigned int *olen, uint64_t tid) {
@@ -147,7 +262,7 @@ void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer, const unsigne
     encode_vxorps_xmmdq_xmmdq_xmmdq(&req, xedd);
     break;
   case XED_IFORM_VMOVUPS_MEMqq_YMMqq:
-    encode_vmovups_memqq_ymmqq(&req, xedd);
+    encode_vmovups_memqq_ymmqq(&req, xedd, tid);
     break;
   default:
     printf("encoder: Unknown instruction");

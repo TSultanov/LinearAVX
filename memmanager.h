@@ -46,10 +46,6 @@ typedef struct {
     __m128 ymm14l_temp;
     __m128 ymm15u;
     __m128 ymm15l_temp;
-    __m128 ymm16u;
-    __m128 ymm16l_temp;
-    __m128 ymm17u;
-    __m128 ymm17l_temp;
 } ymm_upper_t;
 
 ymm_upper_t* get_ymm_for_thread(uint64_t tid);
