@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <vector>
 
 const xed_state_t dstate = {.mmode = XED_MACHINE_MODE_LONG_64,
                             .stack_addr_width = XED_ADDRESS_WIDTH_64b};
@@ -129,7 +130,13 @@ static void encode_vxorps_xmmdq_xmmdq_xmmdq(xed_encoder_request_t *req, xed_deco
   xed3_operand_set_vl(req, xed3_operand_get_vl(xedd));
 }
 
-void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer, const unsigned int ilen, unsigned int *olen) {
+static void encode_vmovups_memqq_ymmqq(xed_encoder_request_t *req, xed_decoded_inst_t *xedd) {
+  std::vector<xed_encoder_request_t> internal_requests;
+
+  
+}
+
+void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer, const unsigned int ilen, unsigned int *olen, uint64_t tid) {
   xed_iform_enum_t iform = xed_decoded_inst_get_iform_enum(xedd);
   xed_encoder_request_t req;
   switch (iform) {
@@ -138,6 +145,9 @@ void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer, const unsigne
     break;
   case XED_IFORM_VXORPS_XMMdq_XMMdq_XMMdq:
     encode_vxorps_xmmdq_xmmdq_xmmdq(&req, xedd);
+    break;
+  case XED_IFORM_VMOVUPS_MEMqq_YMMqq:
+    encode_vmovups_memqq_ymmqq(&req, xedd);
     break;
   default:
     printf("encoder: Unknown instruction");

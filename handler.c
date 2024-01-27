@@ -17,6 +17,7 @@
 #include "xed/xed-init.h"
 #include "encoder.h"
 #include <libproc.h>
+#include <pthread.h>
 
 void hello(void)
 {
@@ -378,7 +379,12 @@ void decode_instruction(unsigned char *inst, xed_decoded_inst_t *xedd, uint32_t 
 void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     ucontext_t *uc = (ucontext_t *)ucontext;
     printf("\n========================\n");
-    printf("Invalid instruction at %p\n", info->si_addr);
+    uint64_t tid;
+    pthread_t self;
+    self = pthread_self();
+    pthread_threadid_np(self, &tid);
+
+    printf("Invalid instruction at %p in thread %p [%llu]\n", info->si_addr, self, tid);
     printf("RIP: %llx\n", uc->uc_mcontext->__ss.__rip);
     printf("RSP: %llx\n", uc->uc_mcontext->__ss.__rsp);
 
@@ -388,7 +394,8 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
 
     uint8_t buffer[15];
     unsigned int olen;
-    encode_instruction(&xedd, buffer, 15, &olen);
+
+    encode_instruction(&xedd, buffer, 15, &olen, tid);
 
     printf("Initial instruction:\n");
     printf("olen = %d\n", initial_olen);
