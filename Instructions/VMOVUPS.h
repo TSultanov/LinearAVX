@@ -24,6 +24,8 @@ class VMOVUPS : public Instruction {
 
 private:
     void implementation() {
-        // 
+        if (!usesYmm()) {
+            
+        }
     }
 };
