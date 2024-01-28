@@ -28,7 +28,7 @@ static xed_encoder_request_t encode_push(xed_reg_enum_t reg) {
   return req;
 }
 
-static xed_encoder_request_t encode_mov_reg_mem(xed_reg_enum_t reg, uint64_t memory_address) {
+static xed_encoder_request_t encode_mov_reg_imm(xed_reg_enum_t reg, uint64_t memory_address) {
   xed_encoder_request_t req;
   xed_encoder_instruction_t enc_inst;
 
@@ -247,7 +247,7 @@ static void encode_vmovups_memqq_ymmqq(xed_encoder_request_t *req, xed_decoded_i
   internal_requests.emplace_back(encode_push(XED_REG_RBX));
 
   // mov rax <higher part of YMMx register>
-  ymm_upper_t* ymm_bank = get_ymm_for_thread(tid);
+  ymm_t* ymm_bank = get_ymm_for_thread(tid);
   // no idea :(
 }
 

@@ -10,11 +10,11 @@ extern "C" {
     #include "xed/xed-encode.h"
 }
 
-static std::unordered_map<uint64_t, ymm_upper_t*> ymm_register_file;
+static std::unordered_map<uint64_t, ymm_t*> ymm_register_file;
 
-ymm_upper_t* get_ymm_for_thread(uint64_t tid) {
+ymm_t* get_ymm_for_thread(uint64_t tid) {
     if (!ymm_register_file.contains(tid)) {
-        ymm_register_file[tid] = new ymm_upper_t {0};
+        ymm_register_file[tid] = new ymm_t {0};
     }
 
     return ymm_register_file[tid];
