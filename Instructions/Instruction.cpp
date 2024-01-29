@@ -29,7 +29,7 @@ void Instruction::push(xed_reg_enum_t reg) {
 void Instruction::ret() {
     xed_encoder_request_t req;
     xed_encoder_instruction_t enc_inst;
-    xed_inst0(&enc_inst, dstate, XED_ICLASS_RET_NEAR, 32);
+    xed_inst0(&enc_inst, dstate, XED_ICLASS_RET_NEAR, 64);
     xed_convert_to_encoder_request(&req, &enc_inst);
     
     internal_requests.push_back(req);
