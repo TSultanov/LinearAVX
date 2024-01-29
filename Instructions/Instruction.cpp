@@ -6,6 +6,15 @@
 const xed_state_t dstate = {.mmode = XED_MACHINE_MODE_LONG_64,
                             .stack_addr_width = XED_ADDRESS_WIDTH_64b};
 
+Instruction::Instruction(const xed_decoded_inst_t *xedd)
+:xi(xed_decoded_inst_inst(xedd))
+{
+    auto n_operands = xed_inst_noperands(xi);
+    for (uint32_t i = 0; i < n_operands; i++) {
+        operands.emplace_back(Operand(xedd, i));
+    }
+}
+
 void Instruction::push(xed_reg_enum_t reg) {
     xed_encoder_request_t req;
     xed_encoder_instruction_t enc_inst;
@@ -37,30 +46,38 @@ void Instruction::mov(xed_reg_enum_t reg, uint64_t immediate) {
 }
 
 void Instruction::movups(xed_reg_enum_t reg, xed_encoder_operand_t mem) {
-    xed_encoder_request_t req;
-    xed_encoder_instruction_t enc_inst;
-
-    xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVUPS, 0, xed_reg(reg), mem);
-    xed_convert_to_encoder_request(&req, &enc_inst);
-
-    internal_requests.push_back(req);
+    movups(xed_reg(reg), mem);
 }
 
 void Instruction::movups(xed_encoder_operand_t mem, xed_reg_enum_t reg) {
+    movups(mem, xed_reg(reg));
+}
+
+void Instruction::movups(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     xed_encoder_request_t req;
     xed_encoder_instruction_t enc_inst;
 
-    xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVUPS, 0, mem, xed_reg(reg));
+    xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVUPS, 0, op0, op1);
     xed_convert_to_encoder_request(&req, &enc_inst);
 
     internal_requests.push_back(req);
 }
 
-void Instruction::movups(xed_encoder_operand_t mem0, xed_encoder_operand_t mem1) {
+void Instruction::movss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     xed_encoder_request_t req;
     xed_encoder_instruction_t enc_inst;
 
-    xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVUPS, 0, mem0, mem1);
+    xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVSS, 0, op0, op1);
+    xed_convert_to_encoder_request(&req, &enc_inst);
+
+    internal_requests.push_back(req);
+}
+
+void Instruction::xorps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    xed_encoder_request_t req;
+    xed_encoder_instruction_t enc_inst;
+
+    xed_inst2(&enc_inst, dstate, XED_ICLASS_XORPS, 0, op0, op1);
     xed_convert_to_encoder_request(&req, &enc_inst);
 
     internal_requests.push_back(req);

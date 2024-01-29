@@ -47,6 +47,9 @@ xed_encoder_operand_t Operand::toEncoderOperand(bool upper) const {
         );
         return bisd;
     }
+    
+    // TODO: handle RSP offset
+    // TODO: handle immediate values
 
     if (isYmm() || isXmm()) {
         return xed_reg(toXmmReg());

@@ -1,8 +1,21 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <xed/xed-interface.h>
 #include "xed/xed-decoded-inst-api.h"
+#include "xed/xed-encode.h"
 #include "xed/xed-encoder-hl.h"
+#include "xed/xed-error-enum.h"
+#include "xed/xed-iclass-enum.h"
+#include "xed/xed-iform-enum.h"
 #include "xed/xed-inst.h"
+#include "xed/xed-operand-enum.h"
+#include "xed/xed-reg-enum.h"
+#ifdef __cplusplus
+}
+#endif
 #include <cassert>
 
 class Operand {

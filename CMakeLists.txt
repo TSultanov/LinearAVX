@@ -11,10 +11,14 @@ add_library(avxhandler SHARED
     encoder.h
     memmanager.cpp
     memmanager.h
+    Instructions/Instructions.h
     Instructions/Instruction.h
     Instructions/Instruction.cpp
     Instructions/Operand.h
+    Instructions/Operand.cpp
     Instructions/VMOVUPS.h
+    Instructions/VMOVSS.h
+    Instructions/VXORPS.h
     )
 target_include_directories(avxhandler PRIVATE ../xed/kits/xed/include)
 target_link_directories(avxhandler PRIVATE ../xed/kits/xed/lib)

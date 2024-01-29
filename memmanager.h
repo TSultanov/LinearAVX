@@ -19,6 +19,6 @@ typedef struct {
 } ymm_t;
 
 ymm_t* get_ymm_for_thread(uint64_t tid);
-uint8_t* encode_requests(std::vector<xed_encoder_request_t> requests);
+uint8_t* encode_requests(std::vector<xed_encoder_request_t>& requests);
 
 #endif /* __MEMMANAGER_H__ */

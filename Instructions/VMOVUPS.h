@@ -1,31 +1,10 @@
-#include "xed/xed-decoded-inst-api.h"
-#include "xed/xed-decoded-inst.h"
-#include "xed/xed-encode.h"
-#include <vector>
+#include "CompilableInstruction.h"
 
-#include "Operand.h"
-#include "Instruction.h"
-
-class VMOVUPS : public Instruction {
-    public:
-    VMOVUPS(xed_decoded_inst_t *xedd) : Instruction(xedd) {
-
-    }
-
-    void compile(ymm_t *ymm) {
-        // TODO
-
-        if (usesYmm()) {
-            with_upper_ymm(ymm, [this]{
-                // TODO
-            });
-        }
-    }
-
+class VMOVUPS : public CompilableInstruction<VMOVUPS> {
+public:
+    VMOVUPS(const xed_decoded_inst_t *xedd) : CompilableInstruction(xedd) {}
 private:
-    void implementation() {
-        if (!usesYmm()) {
-            
-        }
+    void implementation(bool upper) {
+        movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
     }
 };

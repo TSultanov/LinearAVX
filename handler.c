@@ -387,6 +387,7 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     printf("Invalid instruction at %p in thread %p [%llu]\n", info->si_addr, self, tid);
     printf("RIP: %llx\n", uc->uc_mcontext->__ss.__rip);
     printf("RSP: %llx\n", uc->uc_mcontext->__ss.__rsp);
+    printf("RBP: %llx\n", uc->uc_mcontext->__ss.__rbp);
 
     xed_decoded_inst_t xedd;
     uint32_t initial_olen;
@@ -395,7 +396,7 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     uint8_t buffer[15];
     unsigned int olen;
 
-    encode_instruction(&xedd, buffer, 15, &olen, tid);
+    encode_instruction(&xedd, buffer, 15, &olen, tid, uc->uc_mcontext->__ss.__rbp);
 
     printf("Initial instruction:\n");
     printf("olen = %d\n", initial_olen);
