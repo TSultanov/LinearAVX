@@ -9,8 +9,12 @@ add_library(avxhandler SHARED
     handler.h
     encoder.cpp
     encoder.h
+    decoder.c
+    decoder.h
     memmanager.cpp
     memmanager.h
+    printinstr.h
+    printinstr.c
     Instructions/Instructions.h
     Instructions/Instruction.h
     Instructions/Instruction.cpp

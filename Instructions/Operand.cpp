@@ -1,4 +1,5 @@
 #include "Operand.h"
+#include <cstdio>
 
 bool Operand::isMemoryOperand() const {
     return op_name == XED_OPERAND_MEM0 || op_name == XED_OPERAND_MEM1;
@@ -22,7 +23,7 @@ xed_reg_enum_t Operand::toXmmReg() const {
 
 xed_encoder_operand_t Operand::toEncoderOperand(bool upper) const {
     if (isMemoryOperand()) {
-        auto width = xed_decoded_inst_get_memory_displacement_width(xedd, 0);
+        auto width = xed_decoded_inst_get_memory_displacement_width(xedd, 0) * 8;
         xed_uint_t actual_width = width;
 
         auto displacement = xed_decoded_inst_get_memory_displacement(xedd, 0);

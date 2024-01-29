@@ -16,6 +16,8 @@ protected:
             });
         }
 
+        ret();
+        
         return internal_requests;
     }
 

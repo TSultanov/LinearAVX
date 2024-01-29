@@ -9,10 +9,10 @@ private:
         if (operands.size() == 2) {
             movss(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
         }
-        if (operands.size() == 3) {
+        else if (operands.size() == 3) {
             movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
             movss(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
         }
-        __builtin_unreachable();
+        return;
     }
 };

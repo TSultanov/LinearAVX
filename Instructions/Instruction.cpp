@@ -1,6 +1,7 @@
 #include "Instruction.h"
 #include "xed/xed-encode.h"
 #include "xed/xed-encoder-hl.h"
+#include "xed/xed-iclass-enum.h"
 #include "xed/xed-reg-enum.h"
 
 const xed_state_t dstate = {.mmode = XED_MACHINE_MODE_LONG_64,
@@ -22,6 +23,15 @@ void Instruction::push(xed_reg_enum_t reg) {
     xed_inst1(&enc_inst, dstate, XED_ICLASS_PUSH, 64, xed_reg(reg));
     xed_convert_to_encoder_request(&req, &enc_inst);
 
+    internal_requests.push_back(req);
+}
+
+void Instruction::ret() {
+    xed_encoder_request_t req;
+    xed_encoder_instruction_t enc_inst;
+    xed_inst0(&enc_inst, dstate, XED_ICLASS_RET_NEAR, 32);
+    xed_convert_to_encoder_request(&req, &enc_inst);
+    
     internal_requests.push_back(req);
 }
 

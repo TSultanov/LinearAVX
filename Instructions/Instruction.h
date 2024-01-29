@@ -29,6 +29,7 @@ protected:
 
     void push(xed_reg_enum_t reg);
     void pop(xed_reg_enum_t reg);
+    void ret();
     void mov(xed_reg_enum_t reg, uint64_t immediate);
     void movups(xed_reg_enum_t reg, xed_encoder_operand_t mem);
     void movups(xed_encoder_operand_t mem, xed_reg_enum_t reg);

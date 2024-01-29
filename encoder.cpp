@@ -1,6 +1,8 @@
 #include "encoder.h"
 #include "Instructions/Instruction.h"
+#include "decoder.h"
 #include "memmanager.h"
+#include "printinstr.h"
 #include "xed/xed-decoded-inst-api.h"
 #include "xed/xed-encode.h"
 #include "xed/xed-encoder-hl.h"
@@ -22,50 +24,94 @@ const xed_state_t dstate = {.mmode = XED_MACHINE_MODE_LONG_64,
                             .stack_addr_width = XED_ADDRESS_WIDTH_64b};
 
 /* Common instruction requests */
-static xed_encoder_request_t encode_call(uint32_t addr, uint64_t rbp_value) {
-  xed_encoder_request_t req;
-  xed_encoder_instruction_t enc_inst;
+static xed_encoder_request_t encode_call(uint64_t addr, uint64_t rbp_value) {
+    xed_encoder_request_t req;
+    xed_encoder_instruction_t enc_inst;
 
-  uint64_t displacement = addr - rbp_value;
-  uint32_t displacement32 = (uint32_t)displacement;
+    uint64_t displacement = addr - rbp_value;
+    uint32_t displacement32 = (uint32_t)displacement;
 
-  if (displacement != displacement32) {
-    printf("Encoding CALL to 0x%08x, RBP: 0x%08llx, displacement64: 0x%08llx, dusplacement32: 0x%04x failed\n", addr, rbp_value, displacement, displacement32);
-  }
+    printf(
+        "Encoding CALL to 0x%08llx, RBP: 0x%08llx, displacement64: 0x%08llx, "
+        "dusplacement32: 0x%04x failed\n",
+        addr, rbp_value, displacement, displacement32);
 
-  auto disp = xed_disp(displacement32, 32);
-  xed_inst1(&enc_inst, dstate, XED_ICLASS_CALL_NEAR, 0, xed_mem_bd(XED_REG_RBP, disp, 32));
+    auto disp = xed_disp(displacement32, 32);
+    xed_inst1(&enc_inst, dstate, XED_ICLASS_CALL_NEAR, 0,
+              xed_mem_bd(XED_REG_RBP, disp, 32));
 
-  xed_convert_to_encoder_request(&req, &enc_inst);
-  return req;
+    xed_convert_to_encoder_request(&req, &enc_inst);
+    return req;
 }
 
-void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer, const unsigned int ilen, unsigned int *olen, uint64_t tid, uint64_t rbp_value) {
-  xed_iclass_enum_t iclass = xed_decoded_inst_get_iclass(xedd);
+struct instruction {
+    uint8_t buffer[15];
+    uint32_t olen;
+};
 
-  if (!iclassMapping.contains(iclass)) {
-    printf("Unsupported iclass %s\n", xed_iclass_enum_t2str(iclass));
-    exit(1);
-  }
+uint8_t *encode_requests(std::vector<xed_encoder_request_t> &requests) {
+    std::vector<instruction> encoded_instructions;
+    for (uint32_t i = 0; i < requests.size(); i++) {
+        xed_encoder_request_t &req = requests[i];
+        printf("%d: Encoding %s\n", i,
+               xed_iclass_enum_t2str(xed_encoder_request_get_iclass(&req)));
+        instruction instr;
+        xed_error_enum_t err = xed_encode(&req, instr.buffer, 15, &instr.olen);
+        if (err != XED_ERROR_NONE) {
+            printf("%d: Encoder error: %s\n", i, xed_error_enum_t2str(err));
+            exit(1);
+        }
 
-  auto instrFactory = iclassMapping.at(iclass);
-  std::shared_ptr<Instruction> instr = instrFactory(xedd);
+        xed_decoded_inst_t xedd;
+        uint32_t olen;
+        decode_instruction(instr.buffer, &xedd, &olen);
 
-  ymm_t* ymm = get_ymm_for_thread(tid);
-  auto requests = instr->compile(ymm);
+        encoded_instructions.push_back(instr);
+    }
 
-  uint8_t* chunk = encode_requests(requests);
-  
-  xed_encoder_request_t req;
+    uint64_t total_olen = 0;
+    for (auto const &instr : encoded_instructions) {
+        total_olen += instr.olen;
+    }
 
-  uint64_t chunk_addr = (uint64_t)chunk;
+    uint8_t *stencil = alloc_executable(total_olen); // Yes, a memory leak TODO
+    uint64_t offset = 0;
+    for (auto const &instr : encoded_instructions) {
+        memcpy(stencil + offset, instr.buffer, instr.olen);
+        offset += instr.olen;
+    }
 
-  // TODO handle inline replacement
+    return stencil;
+}
 
-  encode_call(chunk_addr, rbp_value);
-  xed_error_enum_t err = xed_encode(&req, buffer, ilen, olen);
-  if (err != XED_ERROR_NONE) {
-    printf("Encoder error: %s\n", xed_error_enum_t2str(err));
-    exit(1);
-  }
+void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer,
+                        const unsigned int ilen, unsigned int *olen,
+                        uint64_t tid, uint64_t rbp_value) {
+    xed_iclass_enum_t iclass = xed_decoded_inst_get_iclass(xedd);
+
+    if (!iclassMapping.contains(iclass)) {
+        printf("Unsupported iclass %s\n", xed_iclass_enum_t2str(iclass));
+        exit(1);
+    }
+
+    auto instrFactory = iclassMapping.at(iclass);
+    std::shared_ptr<Instruction> instr = instrFactory(xedd);
+
+    ymm_t *ymm = get_ymm_for_thread(tid);
+    auto requests = instr->compile(ymm);
+
+    uint8_t *chunk = encode_requests(requests);
+
+    xed_encoder_request_t req;
+
+    uint64_t chunk_addr = (uint64_t)chunk;
+
+    // TODO handle inline replacement
+
+    encode_call(chunk_addr, rbp_value);
+    xed_error_enum_t err = xed_encode(&req, buffer, ilen, olen);
+    if (err != XED_ERROR_NONE) {
+        printf("Encoder error: %s\n", xed_error_enum_t2str(err));
+        exit(1);
+    }
 }
