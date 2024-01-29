@@ -10,7 +10,7 @@ void decode_instruction(unsigned char *inst, xed_decoded_inst_t *xedd, uint32_t 
     xed_machine_mode_enum_t mmode = XED_MACHINE_MODE_LONG_64;
     xed_address_width_enum_t stack_addr_width = XED_ADDRESS_WIDTH_64b;
 
-    uint32_t instruction_length = 15;
+    const uint32_t instruction_length = 15;
 
     xed_error_enum_t xed_error;
     xed_decoded_inst_zero(xedd);
@@ -18,7 +18,7 @@ void decode_instruction(unsigned char *inst, xed_decoded_inst_t *xedd, uint32_t 
     xed_error = xed_decode(xedd, 
                             XED_STATIC_CAST(const xed_uint8_t*,inst),
                             instruction_length);
-    printf("Length: %d, Error: %s\n",(int)xed_decoded_inst_get_length(xedd), xed_error_enum_t2str(xed_error));
     *olen = xed_decoded_inst_get_length(xedd);
+    printf("Length: %d, Error: %s\n",(int)*olen, xed_error_enum_t2str(xed_error));
     print_instr(xedd);
 }

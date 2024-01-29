@@ -31,6 +31,23 @@ void hello(void)
     }
 }
 
+void decode_instruction2(unsigned char *inst, xed_decoded_inst_t *xedd, uint32_t *olen) {
+    xed_machine_mode_enum_t mmode = XED_MACHINE_MODE_LONG_64;
+    xed_address_width_enum_t stack_addr_width = XED_ADDRESS_WIDTH_64b;
+
+    uint32_t instruction_length = 15;
+
+    xed_error_enum_t xed_error;
+    xed_decoded_inst_zero(xedd);
+    xed_decoded_inst_set_mode(xedd, mmode, stack_addr_width);
+    xed_error = xed_decode(xedd, 
+                            XED_STATIC_CAST(const xed_uint8_t*,inst),
+                            instruction_length);
+    printf("Length: %d, Error: %s\n",(int)xed_decoded_inst_get_length(xedd), xed_error_enum_t2str(xed_error));
+    *olen = xed_decoded_inst_get_length(xedd);
+    print_instr(xedd);
+}
+
 void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     ucontext_t *uc = (ucontext_t *)ucontext;
     printf("\n========================\n");
@@ -44,9 +61,12 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     printf("RSP: %llx\n", uc->uc_mcontext->__ss.__rsp);
     printf("RBP: %llx\n", uc->uc_mcontext->__ss.__rbp);
 
+    uint8_t initial_instr[15];
+    memcpy(initial_instr, (unsigned char*)info->si_addr, 15);
+
     xed_decoded_inst_t xedd;
     uint32_t initial_olen;
-    decode_instruction((unsigned char*)info->si_addr, &xedd, &initial_olen);
+    decode_instruction2(initial_instr, &xedd, &initial_olen);
 
     uint8_t buffer[15];
     unsigned int olen;
