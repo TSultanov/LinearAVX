@@ -112,6 +112,7 @@ void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer,
 
         chunk_length = 0;
         chunk = encode_requests(requests, &chunk_length);
+        inline_compiled = true;
     }
 
 
