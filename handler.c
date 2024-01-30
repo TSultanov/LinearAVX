@@ -61,7 +61,7 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     printf("RSP: %llx\n", uc->uc_mcontext->__ss.__rsp);
     printf("RBP: %llx\n", uc->uc_mcontext->__ss.__rbp);
 
-    uint8_t initial_instr[15];
+    uint8_t initial_instr[15];// = { 0xe8, 0x8d, 0x0c, 0x48, 0x00 };
     memcpy(initial_instr, (unsigned char*)info->si_addr, 15);
 
     xed_decoded_inst_t xedd;
@@ -71,7 +71,7 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     uint8_t buffer[15];
     unsigned int olen;
 
-    encode_instruction(&xedd, buffer, 15, &olen, tid, uc->uc_mcontext->__ss.__rbp);
+    encode_instruction(&xedd, buffer, initial_olen, &olen, tid, uc->uc_mcontext->__ss.__rbp, uc->uc_mcontext->__ss.__rip);
 
     printf("Initial instruction:\n");
     printf("olen = %d\n", initial_olen);
@@ -88,10 +88,10 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     printf("\n");
     xed_decoded_inst_t xedd2;
     uint32_t initial_olen2;
-    decode_instruction(buffer, &xedd2, &initial_olen2);
+    decode_instruction2(buffer, &xedd2, &initial_olen2);
 
     if (olen > initial_olen) {
-        printf("Translated instruction is longer than original one, cannot continue\n");
+        printf("Translated instruction is longer than original one (%d > %d), cannot continue\n", olen, initial_olen);
         exit(1);
     }
 

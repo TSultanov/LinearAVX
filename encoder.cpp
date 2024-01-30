@@ -3,7 +3,9 @@
 #include "decoder.h"
 #include "memmanager.h"
 #include "printinstr.h"
+#include "xed/xed-build-defines.h"
 #include "xed/xed-decoded-inst-api.h"
+#include "xed/xed-encode-direct.h"
 #include "xed/xed-encode.h"
 #include "xed/xed-encoder-hl.h"
 #include "xed/xed-error-enum.h"
@@ -11,6 +13,7 @@
 #include "xed/xed-iform-enum.h"
 #include "xed/xed-inst.h"
 #include "xed/xed-operand-enum.h"
+#include "xed/xed-operand-values-interface.h"
 #include "xed/xed-reg-enum.h"
 #include <assert.h>
 #include <memory>
@@ -22,30 +25,6 @@
 
 const xed_state_t dstate = {.mmode = XED_MACHINE_MODE_LONG_64,
                             .stack_addr_width = XED_ADDRESS_WIDTH_64b};
-
-/* Common instruction requests */
-static xed_encoder_request_t encode_call(uint64_t addr, uint64_t rbp_value) {
-    xed_encoder_request_t req;
-    xed_encoder_instruction_t enc_inst;
-
-    int64_t displacement = addr - rbp_value;
-    int32_t displacement32 = (int32_t)displacement;
-
-    printf(
-        "Encoding CALL to 0x%08llx, RBP: 0x%08llx, displacement64: 0x%08llx, "
-        "dusplacement32: 0x%04x failed\n",
-        addr, rbp_value, displacement, displacement32);
-
-    auto disp = xed_disp(displacement, 32);
-    // xed_inst1(&enc_inst, dstate, XED_ICLASS_CALL_NEAR, 32,
-    //           xed_mem_bd(XED_REG_RBP, disp, 32));
-
-    xed_inst1(&enc_inst, dstate, XED_ICLASS_CALL_NEAR, 32,
-              xed_imm0(displacement, 32));
-
-    xed_convert_to_encoder_request(&req, &enc_inst);
-    return req;
-}
 
 struct instruction {
     uint8_t buffer[15];
@@ -69,7 +48,7 @@ void decode_instruction3(unsigned char *inst, xed_decoded_inst_t *xedd, uint32_t
     print_instr(xedd);
 }
 
-uint8_t *encode_requests(std::vector<xed_encoder_request_t> &requests) {
+uint8_t *encode_requests(std::vector<xed_encoder_request_t> &requests, uint64_t *length) {
     std::vector<instruction> encoded_instructions;
     for (uint32_t i = 0; i < requests.size(); i++) {
         xed_encoder_request_t &req = requests[i];
@@ -101,12 +80,13 @@ uint8_t *encode_requests(std::vector<xed_encoder_request_t> &requests) {
         offset += instr.olen;
     }
 
+    *length = offset;
     return stencil;
 }
 
 void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer,
                         const unsigned int ilen, unsigned int *olen,
-                        uint64_t tid, uint64_t rbp_value) {
+                        uint64_t tid, uint64_t rbp_value, uint64_t rip_value) {
     xed_iclass_enum_t iclass = xed_decoded_inst_get_iclass(xedd);
 
     if (!iclassMapping.contains(iclass)) {
@@ -120,18 +100,33 @@ void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer,
     ymm_t *ymm = get_ymm_for_thread(tid);
     auto requests = instr->compile(ymm);
 
-    uint8_t *chunk = encode_requests(requests);
+    uint64_t chunk_length = 0;
+    uint8_t *chunk = encode_requests(requests, &chunk_length);
+    const uint64_t retLength = 1;
+    printf("chunk_length = %llu\n", chunk_length);
 
-    xed_encoder_request_t req;
+    bool inline_compiled = false;
+    if (chunk_length - 1 <= ilen) {
+        printf("JITted instructions should fit inline, recompiling for inline\n");
+        requests = instr->compile(ymm, true);
 
-    uint64_t chunk_addr = (uint64_t)chunk;
+        chunk_length = 0;
+        chunk = encode_requests(requests, &chunk_length);
+    }
 
-    // TODO handle inline replacement
 
-    encode_call(chunk_addr, rbp_value);
-    xed_error_enum_t err = xed_encode(&req, buffer, ilen, olen);
-    if (err != XED_ERROR_NONE) {
-        printf("Encoder error: %s\n", xed_error_enum_t2str(err));
-        exit(1);
+    if (inline_compiled) {
+        memcpy(buffer, chunk, chunk_length);
+        *olen = chunk_length;
+    } else {
+        uint64_t chunk_addr = (uint64_t)chunk;
+        int64_t displacement = chunk_addr - rip_value;
+        int32_t displacement32 = (int32_t)displacement - 5;
+        buffer[0] = 0xe8;
+        buffer[1] = displacement32 & 0xff;
+        buffer[2] = (displacement32 & 0xff00) >> 8;
+        buffer[3] = (displacement32 & 0xff0000) >> 16;
+        buffer[4] = (displacement32 & 0xff000000) >> 24;
+        *olen = 5;
     }
 }

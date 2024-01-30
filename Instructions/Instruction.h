@@ -40,5 +40,5 @@ protected:
     void swap_out_upper_ymm(ymm_t *ymm);
     void with_upper_ymm(ymm_t *ymm, std::function<void()> instr);
     public:
-    virtual std::vector<xed_encoder_request_t> const& compile(ymm_t *ymm) = 0;
+    virtual std::vector<xed_encoder_request_t> const& compile(ymm_t *ymm, bool compile_inline = false) = 0;
 };
