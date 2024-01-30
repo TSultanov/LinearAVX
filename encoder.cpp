@@ -115,7 +115,6 @@ void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer,
         inline_compiled = true;
     }
 
-
     if (inline_compiled) {
         memcpy(buffer, chunk, chunk_length);
         *olen = chunk_length;

@@ -61,14 +61,14 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     printf("RSP: %llx\n", uc->uc_mcontext->__ss.__rsp);
     printf("RBP: %llx\n", uc->uc_mcontext->__ss.__rbp);
 
-    uint8_t initial_instr[15];// = { 0xe8, 0x8d, 0x0c, 0x48, 0x00 };
+    uint8_t initial_instr[XED_MAX_INSTRUCTION_BYTES];// = { 0xe8, 0x8d, 0x0c, 0x48, 0x00 };
     memcpy(initial_instr, (unsigned char*)info->si_addr, 15);
 
     xed_decoded_inst_t xedd;
     uint32_t initial_olen;
     decode_instruction2(initial_instr, &xedd, &initial_olen);
 
-    uint8_t buffer[15];
+    uint8_t buffer[XED_MAX_INSTRUCTION_BYTES];
     unsigned int olen;
 
     encode_instruction(&xedd, buffer, initial_olen, &olen, tid, uc->uc_mcontext->__ss.__rbp, uc->uc_mcontext->__ss.__rip);

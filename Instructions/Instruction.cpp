@@ -78,6 +78,7 @@ void Instruction::movss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     xed_encoder_instruction_t enc_inst;
 
     xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVSS, 0, op0, op1);
+    xed_encoder_request_zero(&req);
     xed_convert_to_encoder_request(&req, &enc_inst);
 
     internal_requests.push_back(req);
