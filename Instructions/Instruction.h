@@ -17,6 +17,12 @@ extern "C" {
 #include "Operand.h"
 #include "../memmanager.h"
 
+enum class CompilationStrategy {
+    DirectCall,
+    Inline,
+    // ExceptionCall
+};
+
 class Instruction {
     const xed_inst_t *xi;
 protected:
@@ -27,6 +33,7 @@ protected:
 
     bool usesYmm() const;
 
+    void push(xed_encoder_operand_t op0);
     void push(xed_reg_enum_t reg);
     void pop(xed_reg_enum_t reg);
     void ret();
@@ -40,5 +47,5 @@ protected:
     void swap_out_upper_ymm(ymm_t *ymm);
     void with_upper_ymm(ymm_t *ymm, std::function<void()> instr);
     public:
-    virtual std::vector<xed_encoder_request_t> const& compile(ymm_t *ymm, bool compile_inline = false) = 0;
+    virtual std::vector<xed_encoder_request_t> const& compile(ymm_t *ymm, CompilationStrategy compilationStrategy, uint64_t returnAddr = 0) = 0;
 };

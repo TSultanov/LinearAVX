@@ -66,7 +66,6 @@ xed_encoder_operand_t Operand::toEncoderOperand(bool upper) const {
 
     if (isYmm() || isXmm()) {
         auto xmmReg = toXmmReg();
-        printf("xmmReg = %s\n", xed_reg_enum_t2str(xmmReg));
         return xed_reg(xmmReg);
     }
 

@@ -15,6 +15,7 @@
 #include "encoder.h"
 #include <libproc.h>
 #include <pthread.h>
+#include "memmanager.h"
 #include "printinstr.h"
 #include "decoder.h"
 
@@ -60,6 +61,23 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     printf("RIP: %llx\n", uc->uc_mcontext->__ss.__rip);
     printf("RSP: %llx\n", uc->uc_mcontext->__ss.__rsp);
     printf("RBP: %llx\n", uc->uc_mcontext->__ss.__rbp);
+
+    // print GPR
+    printf("RAX: %llx\n", uc->uc_mcontext->__ss.__rax);
+    printf("RBX: %llx\n", uc->uc_mcontext->__ss.__rbx);
+    printf("RCX: %llx\n", uc->uc_mcontext->__ss.__rcx);
+    printf("RDX: %llx\n", uc->uc_mcontext->__ss.__rdx);
+    printf("RSI: %llx\n", uc->uc_mcontext->__ss.__rsi);
+    printf("RDI: %llx\n", uc->uc_mcontext->__ss.__rdi);
+    printf("R8: %llx\n", uc->uc_mcontext->__ss.__r8);
+    printf("R9: %llx\n", uc->uc_mcontext->__ss.__r9);
+    printf("R10: %llx\n", uc->uc_mcontext->__ss.__r10);
+    printf("R11: %llx\n", uc->uc_mcontext->__ss.__r11);
+    printf("R12: %llx\n", uc->uc_mcontext->__ss.__r12);
+    printf("R13: %llx\n", uc->uc_mcontext->__ss.__r13);
+    printf("R14: %llx\n", uc->uc_mcontext->__ss.__r14);
+    printf("R15: %llx\n", uc->uc_mcontext->__ss.__r15);
+
 
     uint8_t initial_instr[XED_MAX_INSTRUCTION_BYTES];// = { 0xe8, 0x8d, 0x0c, 0x48, 0x00 };
     memcpy(initial_instr, (unsigned char*)info->si_addr, 15);
@@ -111,10 +129,11 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     }
     printf("Copying instruction...\n");
     
-    memcpy(info->si_addr, buffer, olen);
+    printf("Aligining with NOPs... for %d bytes\n", initial_olen - olen);
     if (olen < initial_olen) {
-        memset(info->si_addr + (initial_olen - olen), 0x90, initial_olen - olen);
+        memset(info->si_addr/* + (initial_olen - olen)*/, 0x90, initial_olen - olen);
     }
+    memcpy(info->si_addr + (initial_olen - olen), buffer, olen);
     printf("Copy OK\n");
     // kret = vm_protect(task, (vm_address_t)info->si_addr, initial_olen, FALSE, VM_PROT_READ | VM_PROT_EXECUTE | VM_PROT_ALL);
     // if (kret != KERN_SUCCESS) {
@@ -128,7 +147,7 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
   __attribute__ ((section ("__DATA,__interpose"))) = { (const void*)(unsigned long)&_replacment, (const void*)(unsigned long)    &_replacee };
 
 int	mysigaction(int signum, const struct sigaction * __restrict act, struct sigaction * __restrict oldact) {
-    if (signum != SIGILL) {
+    if (signum != SIGILL && signum != SIGTRAP) {
         printf("sigaction: Installing handler for signal %d\n", signum);
         return sigaction(signum, act, oldact);
     }
@@ -151,7 +170,35 @@ void init_sigill_handler(void) {
 }
 
 void sigtrap_handler(int sig, siginfo_t *info, void *ucontext) {
-    printf("Recieved SIGTRAP");
+    uint64_t rip = ((ucontext_t*)ucontext)->uc_mcontext->__ss.__rip;
+    void* chunk = jumptable_get_chunk(rip-1); // RIP points to instruction after the trap instruction
+    if (chunk == NULL) {
+        printf("sigtrap_handler: No chunk found for rip 0x%llx\n", rip);
+        exit(1);
+    }
+
+    printf("sigtrap_handler: Found chunk for rip 0x%llx at %p\n", rip, chunk);
+    // Save return address on stack
+    uint64_t rsp = ((ucontext_t*)ucontext)->uc_mcontext->__ss.__rsp - 8;
+    uint64_t ret_addr = rip;
+    *((uint64_t*)(rsp)) = ret_addr;
+    ((ucontext_t*)ucontext)->uc_mcontext->__ss.__rsp = rsp;
+    printf("sigtrap_handler: Saved return address 0x%llx on stack\n", ret_addr);
+
+    // Set RIP to point to chunk start
+    ((ucontext_t*)ucontext)->uc_mcontext->__ss.__rip = (uint64_t)chunk;
+}
+
+void init_sigtrap_handler(void) {
+    struct sigaction act;
+    memset (&act, '\0', sizeof(act));
+    act.sa_sigaction = &sigtrap_handler;
+    act.sa_flags = SA_SIGINFO;
+    int res = sigaction(SIGTRAP, &act, NULL);
+    if (res < 0) {
+        perror("sigaction");
+        exit(1);
+    }
 }
 
 __attribute__((constructor))
@@ -160,4 +207,5 @@ void loadMsg(void)
     hello();
     xed_tables_init();
     init_sigill_handler();
+    init_sigtrap_handler();
 }

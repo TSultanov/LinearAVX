@@ -27,3 +27,13 @@ uint8_t* alloc_executable(uint64_t size) {
     auto memory = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_PRIVATE, -1, 0);
     return memory;
 }
+
+static std::unordered_map<uint64_t, void*> executable_chunks_for_locations;
+
+void jumptable_add_chunk(uint64_t location, void* chunk) {
+    executable_chunks_for_locations[location] = chunk;
+}
+
+void* jumptable_get_chunk(uint64_t location) {
+    return executable_chunks_for_locations[location];
+}

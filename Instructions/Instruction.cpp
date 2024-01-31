@@ -16,14 +16,18 @@ Instruction::Instruction(const xed_decoded_inst_t *xedd)
     }
 }
 
-void Instruction::push(xed_reg_enum_t reg) {
+void Instruction::push(xed_encoder_operand_t op) {
     xed_encoder_request_t req;
     xed_encoder_instruction_t enc_inst;
 
-    xed_inst1(&enc_inst, dstate, XED_ICLASS_PUSH, 64, xed_reg(reg));
+    xed_inst1(&enc_inst, dstate, XED_ICLASS_PUSH, 64, op);
     xed_convert_to_encoder_request(&req, &enc_inst);
 
     internal_requests.push_back(req);
+}
+
+void Instruction::push(xed_reg_enum_t reg) {
+    push(xed_reg(reg));
 }
 
 void Instruction::ret() {

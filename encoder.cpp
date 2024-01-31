@@ -61,9 +61,9 @@ uint8_t *encode_requests(std::vector<xed_encoder_request_t> &requests, uint64_t 
             exit(1);
         }
 
-        xed_decoded_inst_t xedd;
-        uint32_t olen;
-        decode_instruction3(instr.buffer, &xedd, &olen);
+        // xed_decoded_inst_t xedd;
+        // uint32_t olen;
+        // decode_instruction3(instr.buffer, &xedd, &olen);
 
         encoded_instructions.push_back(instr);
     }
@@ -98,7 +98,7 @@ void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer,
     std::shared_ptr<Instruction> instr = instrFactory(xedd);
 
     ymm_t *ymm = get_ymm_for_thread(tid);
-    auto requests = instr->compile(ymm);
+    auto requests = instr->compile(ymm, CompilationStrategy::DirectCall);
 
     uint64_t chunk_length = 0;
     uint8_t *chunk = encode_requests(requests, &chunk_length);
@@ -108,7 +108,7 @@ void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer,
     bool inline_compiled = false;
     if (chunk_length - 1 <= ilen) {
         printf("JITted instructions should fit inline, recompiling for inline\n");
-        requests = instr->compile(ymm, true);
+        requests = instr->compile(ymm, CompilationStrategy::Inline);
 
         chunk_length = 0;
         chunk = encode_requests(requests, &chunk_length);
@@ -122,6 +122,26 @@ void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer,
         uint64_t chunk_addr = (uint64_t)chunk;
         int64_t displacement = chunk_addr - rip_value;
         int32_t displacement32 = (int32_t)displacement - 5;
+        if (displacement32 != displacement - 5) {
+            printf("rip displacement too big\n");
+            printf("rip displacement: 0x%llx (%lld)\n", displacement, displacement);
+            printf("rip displacement32: 0x%x (%d)\n", displacement32, displacement32);
+            printf("Emitting INT3\n");
+            buffer[0] = 0xcc;
+            *olen = 1;
+
+            // printf("Recompiling for exception call\n");
+
+            // requests = instr->compile(ymm, CompilationStrategy::ExceptionCall, rip_value+1);
+
+            // chunk_length = 0;
+            // chunk = encode_requests(requests, &chunk_length);
+            // *chunk = 0xcc;
+
+            jumptable_add_chunk(rip_value + (ilen - 1), chunk);
+            return;
+        }
+
         buffer[0] = 0xe8;
         buffer[1] = displacement32 & 0xff;
         buffer[2] = (displacement32 & 0xff00) >> 8;
