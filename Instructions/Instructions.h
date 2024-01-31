@@ -3,6 +3,7 @@
 #include "Instruction.h"
 #include "VMOVSS.h"
 #include "VMOVUPS.h"
+#include "VMOVAPS.h"
 #include "VXORPS.h"
 #include <map>
 
@@ -25,5 +26,6 @@ typedef std::function<std::shared_ptr<Instruction>(xed_decoded_inst_t const*)> i
 const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VMOVSS),
     ICLASSMAP(VXORPS),
-    ICLASSMAP(VMOVUPS)
+    ICLASSMAP(VMOVUPS),
+    ICLASSMAP(VMOVAPS)
 };

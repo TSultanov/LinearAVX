@@ -41,6 +41,7 @@ protected:
     void movups(xed_reg_enum_t reg, xed_encoder_operand_t mem);
     void movups(xed_encoder_operand_t mem, xed_reg_enum_t reg);
     void movups(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void movaps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void xorps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void swap_in_upper_ymm(ymm_t *ymm);
