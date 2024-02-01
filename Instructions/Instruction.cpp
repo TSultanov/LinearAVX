@@ -9,6 +9,9 @@ const xed_state_t dstate = {.mmode = XED_MACHINE_MODE_LONG_64,
 
 Instruction::Instruction(const xed_decoded_inst_t *xedd)
 :xi(xed_decoded_inst_inst(xedd))
+,opWidth(xed_decoded_inst_get_operand_width(xedd))
+,vl(xed3_operand_get_vl(xedd))
+,xedd(xedd)
 {
     auto n_operands = xed_inst_noperands(xi);
     for (uint32_t i = 0; i < n_operands; i++) {
@@ -91,9 +94,9 @@ void Instruction::movss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     xed_encoder_request_t req;
     xed_encoder_instruction_t enc_inst;
 
-    xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVSS, 0, op0, op1);
-    xed_encoder_request_zero(&req);
+    xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVSS, opWidth, op0, op1);
     xed_convert_to_encoder_request(&req, &enc_inst);
+    xed3_operand_set_vl(&req, vl);
 
     internal_requests.push_back(req);
 }

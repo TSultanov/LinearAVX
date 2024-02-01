@@ -24,6 +24,7 @@ class Operand {
     const xed_operand_t *op;
     const xed_operand_enum_t op_name;
     const xed_reg_enum_t m_reg;
+    const uint32_t index;
 public:
     Operand(const xed_decoded_inst_t *xedd, uint32_t i)
         :xedd(xedd)
@@ -31,6 +32,7 @@ public:
         ,op(xed_inst_operand(xi, i))
         ,op_name(xed_operand_name(op))
         ,m_reg(xed_decoded_inst_get_reg(xedd, op_name))
+        ,index(i)
     {}
 
     bool isMemoryOperand() const;

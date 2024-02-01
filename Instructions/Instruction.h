@@ -24,8 +24,11 @@ enum class CompilationStrategy {
 };
 
 class Instruction {
-    const xed_inst_t *xi;
+    const uint32_t opWidth;
+    const xed_bits_t vl;
 protected:
+    const xed_inst_t *xi;
+    const xed_encoder_request_t *xedd;
     std::vector<xed_encoder_request_t> internal_requests;
     std::vector<Operand> operands;
 

@@ -1,4 +1,6 @@
 #include "CompilableInstruction.h"
+#include "xed/xed-decoded-inst-api.h"
+#include "xed/xed-operand-accessors.h"
 
 class VMOVSS : public CompilableInstruction<VMOVSS> {
 public:

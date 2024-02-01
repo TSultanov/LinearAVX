@@ -62,21 +62,21 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     printf("RSP: %llx\n", uc->uc_mcontext->__ss.__rsp);
     printf("RBP: %llx\n", uc->uc_mcontext->__ss.__rbp);
 
-    // print GPR
-    printf("RAX: %llx\n", uc->uc_mcontext->__ss.__rax);
-    printf("RBX: %llx\n", uc->uc_mcontext->__ss.__rbx);
-    printf("RCX: %llx\n", uc->uc_mcontext->__ss.__rcx);
-    printf("RDX: %llx\n", uc->uc_mcontext->__ss.__rdx);
-    printf("RSI: %llx\n", uc->uc_mcontext->__ss.__rsi);
-    printf("RDI: %llx\n", uc->uc_mcontext->__ss.__rdi);
-    printf("R8: %llx\n", uc->uc_mcontext->__ss.__r8);
-    printf("R9: %llx\n", uc->uc_mcontext->__ss.__r9);
-    printf("R10: %llx\n", uc->uc_mcontext->__ss.__r10);
-    printf("R11: %llx\n", uc->uc_mcontext->__ss.__r11);
-    printf("R12: %llx\n", uc->uc_mcontext->__ss.__r12);
-    printf("R13: %llx\n", uc->uc_mcontext->__ss.__r13);
-    printf("R14: %llx\n", uc->uc_mcontext->__ss.__r14);
-    printf("R15: %llx\n", uc->uc_mcontext->__ss.__r15);
+    // // print GPR
+    // printf("RAX: %llx\n", uc->uc_mcontext->__ss.__rax);
+    // printf("RBX: %llx\n", uc->uc_mcontext->__ss.__rbx);
+    // printf("RCX: %llx\n", uc->uc_mcontext->__ss.__rcx);
+    // printf("RDX: %llx\n", uc->uc_mcontext->__ss.__rdx);
+    // printf("RSI: %llx\n", uc->uc_mcontext->__ss.__rsi);
+    // printf("RDI: %llx\n", uc->uc_mcontext->__ss.__rdi);
+    // printf("R8: %llx\n", uc->uc_mcontext->__ss.__r8);
+    // printf("R9: %llx\n", uc->uc_mcontext->__ss.__r9);
+    // printf("R10: %llx\n", uc->uc_mcontext->__ss.__r10);
+    // printf("R11: %llx\n", uc->uc_mcontext->__ss.__r11);
+    // printf("R12: %llx\n", uc->uc_mcontext->__ss.__r12);
+    // printf("R13: %llx\n", uc->uc_mcontext->__ss.__r13);
+    // printf("R14: %llx\n", uc->uc_mcontext->__ss.__r14);
+    // printf("R15: %llx\n", uc->uc_mcontext->__ss.__r15);
 
 
     uint8_t initial_instr[XED_MAX_INSTRUCTION_BYTES];// = { 0xe8, 0x8d, 0x0c, 0x48, 0x00 };
@@ -86,17 +86,17 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     uint32_t initial_olen;
     decode_instruction2(initial_instr, &xedd, &initial_olen);
 
-    uint8_t buffer[XED_MAX_INSTRUCTION_BYTES];
-    unsigned int olen;
-
-    encode_instruction(&xedd, buffer, initial_olen, &olen, tid, uc->uc_mcontext->__ss.__rbp, uc->uc_mcontext->__ss.__rip);
-
     printf("Initial instruction:\n");
     printf("olen = %d\n", initial_olen);
     for(uint32_t i = 0; i < initial_olen; i++) {
         printf(" %02x", (unsigned int)(*((unsigned char*)info->si_addr + i)));
     }
     printf("\n");
+
+    uint8_t buffer[XED_MAX_INSTRUCTION_BYTES];
+    unsigned int olen;
+
+    encode_instruction(&xedd, buffer, initial_olen, &olen, tid, uc->uc_mcontext->__ss.__rbp, uc->uc_mcontext->__ss.__rip);
 
     printf("Translated instruction:\n");
     printf("olen = %d\n", olen);

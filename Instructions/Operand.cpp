@@ -27,7 +27,9 @@ xed_encoder_operand_t Operand::toEncoderOperand(bool upper) const {
     if (isMemoryOperand()) {
         auto width = xed_decoded_inst_get_memory_displacement_width_bits(xedd, 0);
 
-        auto mem_width = xed_decoded_inst_operand_length_bits(xedd, 0);
+        // printf("width: %d\n", width);
+
+        auto mem_width = xed_decoded_inst_operand_length_bits(xedd, index);
         xed_uint_t actual_mem_width = mem_width;
 
         auto displacement = xed_decoded_inst_get_memory_displacement(xedd, 0);
@@ -35,6 +37,10 @@ xed_encoder_operand_t Operand::toEncoderOperand(bool upper) const {
         if (mem_width == 256) {
             actual_mem_width = 128;
         }
+
+        // printf("mem_width: %d\n", mem_width);
+        // printf("actual_mem_width: %d\n", actual_mem_width);
+        // printf("displacement: %lld\n", displacement);
 
         if (upper) {
             displacement += 16;
