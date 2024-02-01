@@ -7,18 +7,6 @@ private:
     void implementation(bool upper, bool compile_inline) {
         auto value = operands[3].imm8Value();
 
-        if (upper) {
-            if (value <= 16) {
-                return;
-            } else {
-                value -= 16;
-            }
-        } else {
-            if (value > 16) {
-                return;
-            }
-        }
-
         if (operands[0].reg() != operands[1].reg()) {
             movups(
                 operands[0].toEncoderOperand(upper),
