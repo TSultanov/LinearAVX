@@ -17,7 +17,7 @@ bool Operand::isXmm() const {
 }
 
 bool Operand::isYmm() const {
-    return m_reg >= XED_REG_YMM0 && m_reg <= XED_REG_YMM0;
+    return m_reg >= XED_REG_YMM0 && m_reg <= XED_REG_YMM16;
 }
 
 xed_reg_enum_t Operand::toXmmReg() const {
