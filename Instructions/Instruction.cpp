@@ -148,7 +148,7 @@ void Instruction::swap_out_upper_ymm(ymm_t *ymm) {
     push(XED_REG_RAX);
     
     for (auto& op : operands) {
-        if (op.isXmm() || op.isYmm()) {
+        if (op.isYmm()) {
             auto reg = op.toXmmReg();
             uint32_t regnum = reg - XED_REG_XMM0;
 
