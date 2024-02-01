@@ -74,8 +74,10 @@ void Instruction::movups(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     xed_encoder_request_t req;
     xed_encoder_instruction_t enc_inst;
 
-    xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVUPS, 0, op0, op1);
+    // printf("opWidth = %d\n", opWidth);
+    xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVUPS, opWidth, op0, op1);
     xed_convert_to_encoder_request(&req, &enc_inst);
+    xed3_operand_set_vl(&req, vl);
 
     internal_requests.push_back(req);
 }
@@ -115,7 +117,7 @@ void Instruction::swap_in_upper_ymm(ymm_t *ymm) {
     push(XED_REG_RAX);
     
     for (auto& op : operands) {
-        if (op.isXmm() || op.isYmm()) {
+        if (op.isYmm()) {
             auto reg = op.toXmmReg();
             uint32_t regnum = reg - XED_REG_XMM0;
 

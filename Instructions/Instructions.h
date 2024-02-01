@@ -6,6 +6,7 @@
 #include "VMOVAPS.h"
 #include "VXORPS.h"
 #include "VINSERTPS.h"
+#include "VINSERTF128.h"
 #include <map>
 
 #ifdef __cplusplus
@@ -29,5 +30,6 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VXORPS),
     ICLASSMAP(VMOVUPS),
     ICLASSMAP(VMOVAPS),
-    ICLASSMAP(VINSERTPS)
+    ICLASSMAP(VINSERTPS),
+    ICLASSMAP(VINSERTF128)
 };
