@@ -63,21 +63,104 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     printf("RBP: %llx\n", uc->uc_mcontext->__ss.__rbp);
 
     // // print GPR
-    // printf("RAX: %llx\n", uc->uc_mcontext->__ss.__rax);
-    // printf("RBX: %llx\n", uc->uc_mcontext->__ss.__rbx);
-    // printf("RCX: %llx\n", uc->uc_mcontext->__ss.__rcx);
-    // printf("RDX: %llx\n", uc->uc_mcontext->__ss.__rdx);
-    // printf("RSI: %llx\n", uc->uc_mcontext->__ss.__rsi);
-    // printf("RDI: %llx\n", uc->uc_mcontext->__ss.__rdi);
-    // printf("R8: %llx\n", uc->uc_mcontext->__ss.__r8);
-    // printf("R9: %llx\n", uc->uc_mcontext->__ss.__r9);
-    // printf("R10: %llx\n", uc->uc_mcontext->__ss.__r10);
-    // printf("R11: %llx\n", uc->uc_mcontext->__ss.__r11);
-    // printf("R12: %llx\n", uc->uc_mcontext->__ss.__r12);
-    // printf("R13: %llx\n", uc->uc_mcontext->__ss.__r13);
-    // printf("R14: %llx\n", uc->uc_mcontext->__ss.__r14);
-    // printf("R15: %llx\n", uc->uc_mcontext->__ss.__r15);
+    printf("RAX: %llx\n", uc->uc_mcontext->__ss.__rax);
+    printf("RBX: %llx\n", uc->uc_mcontext->__ss.__rbx);
+    printf("RCX: %llx\n", uc->uc_mcontext->__ss.__rcx);
+    printf("RDX: %llx\n", uc->uc_mcontext->__ss.__rdx);
+    printf("RSI: %llx\n", uc->uc_mcontext->__ss.__rsi);
+    printf("RDI: %llx\n", uc->uc_mcontext->__ss.__rdi);
+    printf("R8: %llx\n", uc->uc_mcontext->__ss.__r8);
+    printf("R9: %llx\n", uc->uc_mcontext->__ss.__r9);
+    printf("R10: %llx\n", uc->uc_mcontext->__ss.__r10);
+    printf("R11: %llx\n", uc->uc_mcontext->__ss.__r11);
+    printf("R12: %llx\n", uc->uc_mcontext->__ss.__r12);
+    printf("R13: %llx\n", uc->uc_mcontext->__ss.__r13);
+    printf("R14: %llx\n", uc->uc_mcontext->__ss.__r14);
+    printf("R15: %llx\n", uc->uc_mcontext->__ss.__r15);
 
+    // print XMM
+    ymm_t* ymm_state = get_ymm_for_thread(tid);
+
+    uint64_t buff[2];
+    memcpy(buff, &ymm_state->u[0], sizeof(__m128));
+    printf("YMM0: %llx %llx ", buff[0], buff[1]);
+    memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm0, sizeof(uc->uc_mcontext->__fs.__fpu_xmm0));
+    printf("XMM0: %llx %llx\n", buff[0], buff[1]);
+
+    memcpy(buff, &ymm_state->u[1], sizeof(__m128));
+    printf("YMM1: %llx %llx ", buff[0], buff[1]);
+    memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm1, sizeof(uc->uc_mcontext->__fs.__fpu_xmm1));
+    printf("XMM1: %llx %llx\n", buff[0], buff[1]);
+
+    memcpy(buff, &ymm_state->u[2], sizeof(__m128));
+    printf("YMM2: %llx %llx ", buff[0], buff[1]);
+    memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm2, sizeof(uc->uc_mcontext->__fs.__fpu_xmm2));
+    printf("XMM2: %llx %llx\n", buff[0], buff[1]);
+
+    memcpy(buff, &ymm_state->u[3], sizeof(__m128));
+    printf("YMM3: %llx %llx ", buff[0], buff[1]);
+    memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm3, sizeof(uc->uc_mcontext->__fs.__fpu_xmm3));
+    printf("XMM3: %llx %llx\n", buff[0], buff[1]);
+
+    memcpy(buff, &ymm_state->u[4], sizeof(__m128));
+    printf("YMM4: %llx %llx ", buff[0], buff[1]);
+    memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm4, sizeof(uc->uc_mcontext->__fs.__fpu_xmm4));
+    printf("XMM4: %llx %llx\n", buff[0], buff[1]);
+
+    memcpy(buff, &ymm_state->u[5], sizeof(__m128));
+    printf("YMM5: %llx %llx ", buff[0], buff[1]);
+    memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm5, sizeof(uc->uc_mcontext->__fs.__fpu_xmm5));
+    printf("XMM5: %llx %llx\n", buff[0], buff[1]);
+
+    memcpy(buff, &ymm_state->u[6], sizeof(__m128));
+    printf("YMM6: %llx %llx ", buff[0], buff[1]);
+    memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm6, sizeof(uc->uc_mcontext->__fs.__fpu_xmm6));
+    printf("XMM6: %llx %llx\n", buff[0], buff[1]);
+
+    memcpy(buff, &ymm_state->u[7], sizeof(__m128));
+    printf("YMM7: %llx %llx ", buff[0], buff[1]);
+    memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm7, sizeof(uc->uc_mcontext->__fs.__fpu_xmm7));
+    printf("XMM7: %llx %llx\n", buff[0], buff[1]);
+
+    memcpy(buff, &ymm_state->u[8], sizeof(__m128));
+    printf("YMM8: %llx %llx ", buff[0], buff[1]);
+    memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm7, sizeof(uc->uc_mcontext->__fs.__fpu_xmm8));
+    printf("XMM8: %llx %llx\n", buff[0], buff[1]);
+
+    memcpy(buff, &ymm_state->u[9], sizeof(__m128));
+    printf("YMM9: %llx %llx ", buff[0], buff[1]);
+    memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm9, sizeof(uc->uc_mcontext->__fs.__fpu_xmm9));
+    printf("XMM9: %llx %llx\n", buff[0], buff[1]);
+
+    memcpy(buff, &ymm_state->u[10], sizeof(__m128));
+    printf("YMM10: %llx %llx ", buff[0], buff[1]);
+    memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm10, sizeof(uc->uc_mcontext->__fs.__fpu_xmm10));
+    printf("XMM10: %llx %llx\n", buff[0], buff[1]);
+
+    memcpy(buff, &ymm_state->u[11], sizeof(__m128));
+    printf("YMM11: %llx %llx ", buff[0], buff[1]);
+    memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm11, sizeof(uc->uc_mcontext->__fs.__fpu_xmm11));
+    printf("XMM11: %llx %llx\n", buff[0], buff[1]);
+
+    memcpy(buff, &ymm_state->u[12], sizeof(__m128));
+    printf("YMM12: %llx %llx ", buff[0], buff[1]);
+    memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm12, sizeof(uc->uc_mcontext->__fs.__fpu_xmm12));
+    printf("XMM12: %llx %llx\n", buff[0], buff[1]);
+
+    memcpy(buff, &ymm_state->u[13], sizeof(__m128));
+    printf("YMM13: %llx %llx ", buff[0], buff[1]);
+    memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm13, sizeof(uc->uc_mcontext->__fs.__fpu_xmm13));
+    printf("XMM13: %llx %llx\n", buff[0], buff[1]);
+
+    memcpy(buff, &ymm_state->u[14], sizeof(__m128));
+    printf("YMM14: %llx %llx ", buff[0], buff[1]);
+    memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm14, sizeof(uc->uc_mcontext->__fs.__fpu_xmm14));
+    printf("XMM14: %llx %llx\n", buff[0], buff[1]);
+
+    memcpy(buff, &ymm_state->u[15], sizeof(__m128));
+    printf("YMM15: %llx %llx ", buff[0], buff[1]);
+    memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm15, sizeof(uc->uc_mcontext->__fs.__fpu_xmm15));
+    printf("XMM15: %llx %llx\n", buff[0], buff[1]);
 
     uint8_t initial_instr[XED_MAX_INSTRUCTION_BYTES];// = { 0xe8, 0x8d, 0x0c, 0x48, 0x00 };
     memcpy(initial_instr, (unsigned char*)info->si_addr, 15);
