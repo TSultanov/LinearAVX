@@ -164,3 +164,14 @@ bool Instruction::usesYmm() const {
     }
     return false;
 }
+
+void Instruction::insertps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3) {
+    xed_encoder_request_t req;
+    xed_encoder_instruction_t enc_inst;
+
+    xed_inst3(&enc_inst, dstate, XED_ICLASS_INSERTPS, opWidth, op0, op1, op3);
+    xed_convert_to_encoder_request(&req, &enc_inst);
+    xed3_operand_set_vl(&req, vl);
+
+    internal_requests.push_back(req);
+}

@@ -1,10 +1,15 @@
 #include "Operand.h"
 #include "xed/xed-decoded-inst-api.h"
+#include "xed/xed-operand-enum.h"
 #include "xed/xed-reg-enum.h"
 #include <cstdio>
 
 bool Operand::isMemoryOperand() const {
     return op_name == XED_OPERAND_MEM0 || op_name == XED_OPERAND_MEM1;
+}
+
+bool Operand::isImmediate() const {
+    return op_name == XED_OPERAND_IMM0 || op_name == XED_OPERAND_IMM1;
 }
 
 bool Operand::isXmm() const {
@@ -21,6 +26,10 @@ xed_reg_enum_t Operand::toXmmReg() const {
         return (xed_reg_enum_t)(m_reg - (XED_REG_YMM0 - XED_REG_XMM0));
     }
     return m_reg;
+}
+
+uint8_t Operand::imm8Value() const {
+    return xed_decoded_inst_get_second_immediate(xedd);
 }
 
 xed_encoder_operand_t Operand::toEncoderOperand(bool upper) const {
@@ -68,7 +77,24 @@ xed_encoder_operand_t Operand::toEncoderOperand(bool upper) const {
     }
     
     // TODO: handle RSP offset
-    // TODO: handle immediate values
+    if (isImmediate()) {
+        switch(op_name) {
+            case XED_OPERAND_IMM0:
+            {
+                auto width = xed_decoded_inst_get_immediate_width_bits(xedd);
+                auto value = xed_decoded_inst_get_unsigned_immediate(xedd);
+                return xed_imm0(value, width);
+            }
+            case XED_OPERAND_IMM1:
+            {
+                auto value = xed_decoded_inst_get_second_immediate(xedd);
+                return xed_imm1(value);
+            }
+            default:
+                break;
+
+        }
+    }
 
     if (isYmm() || isXmm()) {
         auto xmmReg = toXmmReg();

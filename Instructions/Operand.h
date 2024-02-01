@@ -36,6 +36,8 @@ public:
     {}
 
     bool isMemoryOperand() const;
+    bool isImmediate() const;
+    uint8_t imm8Value() const;
     xed_reg_enum_t reg() const { return m_reg; }
     bool isXmm() const;
     bool isYmm() const;
