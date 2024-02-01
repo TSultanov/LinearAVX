@@ -46,6 +46,7 @@ protected:
     void movups(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movaps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void movsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void xorps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void insertps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
     void addps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);

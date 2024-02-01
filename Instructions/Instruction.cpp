@@ -103,6 +103,17 @@ void Instruction::movss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     internal_requests.push_back(req);
 }
 
+void Instruction::movsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    xed_encoder_request_t req;
+    xed_encoder_instruction_t enc_inst;
+
+    xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVSD_XMM, opWidth, op0, op1);
+    xed_convert_to_encoder_request(&req, &enc_inst);
+    xed3_operand_set_vl(&req, vl);
+
+    internal_requests.push_back(req);
+}
+
 void Instruction::xorps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     xed_encoder_request_t req;
     xed_encoder_instruction_t enc_inst;
