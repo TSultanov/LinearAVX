@@ -10,6 +10,7 @@
 #include "VADDPS.h"
 #include "VCVTSS2SD.h"
 #include "VMOVSD.h"
+#include "VMOVQ.h"
 #include <map>
 
 #ifdef __cplusplus
@@ -37,5 +38,6 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VINSERTF128),
     ICLASSMAP(VADDPS),
     ICLASSMAP(VCVTSS2SD),
-    ICLASSMAP(VMOVSD)
+    ICLASSMAP(VMOVSD),
+    ICLASSMAP(VMOVQ)
 };
