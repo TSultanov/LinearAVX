@@ -75,6 +75,8 @@ protected:
 
     void withFreeReg(std::function<void(xed_reg_enum_t)> instr);
     void withRipSubstitution(std::function<void(std::function<xed_encoder_operand_t(xed_encoder_operand_t)>)> instr);
+
+    void withPreserveXmmReg(ymm_t *ymm, xed_reg_enum_t reg, std::function<void()> instr);
     public:
     virtual std::vector<xed_encoder_request_t> const& compile(ymm_t *ymm, CompilationStrategy compilationStrategy, uint64_t returnAddr = 0) = 0;
 };

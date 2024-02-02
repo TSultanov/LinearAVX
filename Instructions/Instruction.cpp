@@ -197,6 +197,9 @@ void Instruction::swap_out_upper_ymm(ymm_t *ymm, bool force) {
 }
 
 void Instruction::with_upper_ymm(ymm_t *ymm, std::function<void()> instr) {
+    // This is also a wrong approach as the applicaiton might be multithreaded
+    // and each threads needs to have its own copy of the upper ymm, which
+    // we need somehow find dynamically and not hardcode addresses.
     swap_in_upper_ymm(ymm);
     instr();
     swap_out_upper_ymm(ymm);
@@ -348,7 +351,8 @@ void Instruction::withRipSubstitution(std::function<void(std::function<xed_encod
         });
     } else if (usesRspAddressing()) {
         withFreeReg([=](xed_reg_enum_t tempReg) {
-            mov(tempReg, rsp);
+            mov(tempReg, rsp); // this is wrong. There is no guarantee that RSP will be same on each call.
+            // TODO: use RSP from the current instruction, not the next one.
 
             instr([=](xed_encoder_operand_t op) { return substRip(op, XED_REG_RIP, tempReg); });
         });
