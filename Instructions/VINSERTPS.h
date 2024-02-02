@@ -2,9 +2,9 @@
 
 class VINSERTPS : public CompilableInstruction<VINSERTPS> {
 public:
-    VINSERTPS(const xed_decoded_inst_t *xedd) : CompilableInstruction(xedd) {}
+    VINSERTPS(uint64_t rip, const xed_decoded_inst_t *xedd) : CompilableInstruction(rip, xedd) {}
 private:
-    void implementation(bool upper, bool compile_inline) {
+    void implementation(bool upper, bool compile_inline, ymm_t *ymm) {
         auto value = operands[3].imm8Value();
 
         if (operands[0].reg() != operands[1].reg()) {

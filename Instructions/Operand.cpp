@@ -2,7 +2,9 @@
 #include "xed/xed-decoded-inst-api.h"
 #include "xed/xed-operand-enum.h"
 #include "xed/xed-reg-enum.h"
+#include <_types/_uint64_t.h>
 #include <cstdio>
+#include <vector>
 
 bool Operand::isMemoryOperand() const {
     return op_name == XED_OPERAND_MEM0 || op_name == XED_OPERAND_MEM1;
@@ -30,6 +32,35 @@ xed_reg_enum_t Operand::toXmmReg() const {
 
 uint8_t Operand::imm8Value() const {
     return xed_decoded_inst_get_second_immediate(xedd);
+}
+
+bool Operand::hasRipBase() const {
+    if (!isMemoryOperand()) {
+        return false;
+    }
+
+    auto mem = xed_decoded_inst_get_base_reg(xedd, 0);
+    return mem == XED_REG_RIP;
+}
+
+std::vector<xed_reg_enum_t> Operand::getUsedReg() const {
+    if (isMemoryOperand()) {
+        auto baseReg = xed_decoded_inst_get_base_reg(xedd, 0);
+        auto indexReg = xed_decoded_inst_get_index_reg(xedd, 0);
+        return { baseReg, indexReg };
+    }
+
+    if (isImmediate()) {
+        return {};
+    }
+
+    return { m_reg };
+}
+
+xed_encoder_operand_t translateBaseReg(xed_encoder_operand_t op, int64_t fromValue, xed_reg_enum_t to, int64_t toValue) {
+    op.u.mem.base = to;
+    op.u.mem.disp.displacement += fromValue - toValue;
+    return op;
 }
 
 xed_encoder_operand_t Operand::toEncoderOperand(bool upper) const {
@@ -73,6 +104,7 @@ xed_encoder_operand_t Operand::toEncoderOperand(bool upper) const {
             disp,
             actual_mem_width
         );
+
         return bisd;
     }
     

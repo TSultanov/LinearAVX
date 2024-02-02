@@ -22,11 +22,11 @@ extern "C" {
 }
 #endif
 
-typedef std::function<std::shared_ptr<Instruction>(xed_decoded_inst_t const*)> instrFactory;
+typedef std::function<std::shared_ptr<Instruction>(uint64_t rip, xed_decoded_inst_t const*)> instrFactory;
 
 #define ICLASSMAP(_instr) {\
     XED_ICLASS_##_instr,  \
-    [](xed_decoded_inst_t const* xedd) -> std::shared_ptr<Instruction> { return std::make_shared<_instr>(xedd); } \
+    [](uint64_t rip, xed_decoded_inst_t const* xedd) -> std::shared_ptr<Instruction> { return std::make_shared<_instr>(rip, xedd); } \
 }
 
 const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {

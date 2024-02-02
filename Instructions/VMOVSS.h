@@ -4,9 +4,9 @@
 
 class VMOVSS : public CompilableInstruction<VMOVSS> {
 public:
-    VMOVSS(const xed_decoded_inst_t *xedd) : CompilableInstruction(xedd) {}
+    VMOVSS(uint64_t rip, const xed_decoded_inst_t *xedd) : CompilableInstruction(rip, xedd) {}
 private:
-    void implementation(bool upper, bool compile_inline) override {
+    void implementation(bool upper, bool compile_inline, ymm_t* ymm) override {
         assert(operands.size() == 2 || operands.size() == 3);
         if (operands.size() == 2) {
             movss(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
@@ -15,6 +15,6 @@ private:
             movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
             movss(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
         }
-        return;
+        zeroupperInternal(ymm, operands[0]);
     }
 };

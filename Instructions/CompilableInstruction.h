@@ -5,7 +5,7 @@
 template<class T>
 class CompilableInstruction : public Instruction {
 protected:
-    CompilableInstruction(const xed_decoded_inst_t *xedd) : Instruction(xedd) {}
+    CompilableInstruction(uint64_t rip, const xed_decoded_inst_t *xedd) : Instruction(rip, xedd) {}
 
     std::vector<xed_encoder_request_t> const& compile(ymm_t *ymm, CompilationStrategy compilationStrategy, uint64_t returnAddr = 0) {
         internal_requests.clear();
@@ -14,11 +14,11 @@ protected:
         //     push(xed_imm0(returnAddr, 64));
         // }
 
-        implementation(false, compilationStrategy == CompilationStrategy::Inline);
+        implementation(false, compilationStrategy == CompilationStrategy::Inline, ymm);
 
         if (usesYmm()) {
             with_upper_ymm(ymm, [=, this]{
-                implementation(true, compilationStrategy == CompilationStrategy::Inline);
+                implementation(true, compilationStrategy == CompilationStrategy::Inline, ymm);
             });
         }
 
@@ -29,5 +29,5 @@ protected:
         return internal_requests;
     }
 
-    virtual void implementation(bool upper, bool compile_inline) = 0;
+    virtual void implementation(bool upper, bool compile_inline, ymm_t* ymm) = 0;
 };

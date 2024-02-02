@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -43,4 +44,6 @@ public:
     bool isYmm() const;
     xed_reg_enum_t toXmmReg() const;
     xed_encoder_operand_t toEncoderOperand(bool upper) const;
+    bool hasRipBase() const;
+    std::vector<xed_reg_enum_t> getUsedReg() const;
 };
