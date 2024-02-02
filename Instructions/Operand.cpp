@@ -39,8 +39,19 @@ bool Operand::hasRipBase() const {
         return false;
     }
 
-    auto mem = xed_decoded_inst_get_base_reg(xedd, 0);
-    return mem == XED_REG_RIP;
+    auto base = xed_decoded_inst_get_base_reg(xedd, 0);
+    auto index = xed_decoded_inst_get_index_reg(xedd, 0);
+    return base == XED_REG_RIP || index == XED_REG_RIP;
+}
+
+bool Operand::hasRspBase() const {
+    if (!isMemoryOperand()) {
+        return false;
+    }
+
+    auto base = xed_decoded_inst_get_base_reg(xedd, 0);
+    auto index = xed_decoded_inst_get_index_reg(xedd, 0);
+    return base == XED_REG_RSP || index == XED_REG_RSP;
 }
 
 std::vector<xed_reg_enum_t> Operand::getUsedReg() const {

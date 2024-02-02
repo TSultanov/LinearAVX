@@ -7,12 +7,13 @@
 const xed_state_t dstate = {.mmode = XED_MACHINE_MODE_LONG_64,
                             .stack_addr_width = XED_ADDRESS_WIDTH_64b};
 
-Instruction::Instruction(uint64_t rip, const xed_decoded_inst_t *xedd)
+Instruction::Instruction(uint64_t rip, uint64_t rsp, const xed_decoded_inst_t *xedd)
 :xi(xed_decoded_inst_inst(xedd))
 ,opWidth(xed_decoded_inst_get_operand_width(xedd))
 ,vl(xed3_operand_get_vl(xedd))
 ,xedd(xedd)
 ,rip(rip)
+,rsp(rsp)
 {
     auto n_operands = xed_inst_noperands(xi);
     for (uint32_t i = 0; i < n_operands; i++) {
@@ -26,17 +27,19 @@ Instruction::Instruction(uint64_t rip, const xed_decoded_inst_t *xedd)
     }
 }
 
-xed_encoder_operand_t substRip(xed_encoder_operand_t op, xed_reg_enum_t ripSubstReg) {
-    if (ripSubstReg == XED_REG_RIP) {
-        return op;
-    }
-
+xed_encoder_operand_t substRip(xed_encoder_operand_t op, xed_reg_enum_t ripSubstReg, xed_reg_enum_t rspSubstReg) {
     if (op.type == XED_ENCODER_OPERAND_TYPE_MEM) {
         if (op.u.mem.base == XED_REG_RIP) {
             op.u.mem.base = ripSubstReg;
         }
         if (op.u.mem.index == XED_REG_RIP) {
             op.u.mem.index = ripSubstReg;
+        }
+        if (op.u.mem.base == XED_REG_RSP) {
+            op.u.mem.base = rspSubstReg;
+        }
+        if (op.u.mem.index == XED_REG_RSP) {
+            op.u.mem.index = rspSubstReg;
         }
         return op;
     }
@@ -96,12 +99,12 @@ void Instruction::movups(xed_encoder_operand_t mem, xed_reg_enum_t reg) {
 }
 
 void Instruction::movups(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (xed_reg_enum_t ripSubst) {
+    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
         xed_encoder_request_t req;
         xed_encoder_instruction_t enc_inst;
 
         // printf("opWidth = %d\n", opWidth);
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVUPS, opWidth, substRip(op0, ripSubst), substRip(op1, ripSubst));
+        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVUPS, opWidth, subst(op0), subst(op1));
         xed_convert_to_encoder_request(&req, &enc_inst);
         xed3_operand_set_vl(&req, vl);
 
@@ -110,11 +113,11 @@ void Instruction::movups(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
 }
 
 void Instruction::movaps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (xed_reg_enum_t ripSubst) {
+    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
         xed_encoder_request_t req;
         xed_encoder_instruction_t enc_inst;
 
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVAPS, 0, substRip(op0, ripSubst), substRip(op1, ripSubst));
+        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVAPS, 0, subst(op0), subst(op1));
         xed_convert_to_encoder_request(&req, &enc_inst);
 
         internal_requests.push_back(req);
@@ -122,11 +125,11 @@ void Instruction::movaps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
 }
 
 void Instruction::movss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (xed_reg_enum_t ripSubst) {
+    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
         xed_encoder_request_t req;
         xed_encoder_instruction_t enc_inst;
 
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVSS, opWidth, substRip(op0, ripSubst), substRip(op1, ripSubst));
+        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVSS, opWidth, subst(op0), subst(op1));
         xed_convert_to_encoder_request(&req, &enc_inst);
         xed3_operand_set_vl(&req, vl);
 
@@ -135,11 +138,11 @@ void Instruction::movss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
 }
 
 void Instruction::movsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (xed_reg_enum_t ripSubst) {
+    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
         xed_encoder_request_t req;
         xed_encoder_instruction_t enc_inst;
 
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVSD_XMM, opWidth, substRip(op0, ripSubst), substRip(op1, ripSubst));
+        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVSD_XMM, opWidth, subst(op0), subst(op1));
         xed_convert_to_encoder_request(&req, &enc_inst);
         xed3_operand_set_vl(&req, vl);
 
@@ -148,11 +151,11 @@ void Instruction::movsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
 }
 
 void Instruction::xorps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (xed_reg_enum_t ripSubst) {
+    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
         xed_encoder_request_t req;
         xed_encoder_instruction_t enc_inst;
 
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_XORPS, 0, substRip(op0, ripSubst), substRip(op1, ripSubst));
+        xed_inst2(&enc_inst, dstate, XED_ICLASS_XORPS, 0, subst(op0), subst(op1));
         xed_convert_to_encoder_request(&req, &enc_inst);
 
         internal_requests.push_back(req);
@@ -209,11 +212,11 @@ bool Instruction::usesYmm() const {
 }
 
 void Instruction::insertps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
-    withRipSubstitution([=] (xed_reg_enum_t ripSubst) {
+    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
         xed_encoder_request_t req;
         xed_encoder_instruction_t enc_inst;
 
-        xed_inst3(&enc_inst, dstate, XED_ICLASS_INSERTPS, opWidth, substRip(op0, ripSubst), substRip(op1, ripSubst), substRip(op2, ripSubst));
+        xed_inst3(&enc_inst, dstate, XED_ICLASS_INSERTPS, opWidth, subst(op0), subst(op1), subst(op2));
         xed_convert_to_encoder_request(&req, &enc_inst);
         xed3_operand_set_vl(&req, vl);
 
@@ -222,11 +225,11 @@ void Instruction::insertps(xed_encoder_operand_t op0, xed_encoder_operand_t op1,
 }
 
 void Instruction::addps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (xed_reg_enum_t ripSubst) {
+    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
         xed_encoder_request_t req;
         xed_encoder_instruction_t enc_inst;
 
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_ADDPS, opWidth, substRip(op0, ripSubst), substRip(op1, ripSubst));
+        xed_inst2(&enc_inst, dstate, XED_ICLASS_ADDPS, opWidth, subst(op0), subst(op1));
         xed_convert_to_encoder_request(&req, &enc_inst);
         xed3_operand_set_vl(&req, vl);
 
@@ -235,11 +238,11 @@ void Instruction::addps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
 }
 
 void Instruction::cvtss2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (xed_reg_enum_t ripSubst) {
+    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
         xed_encoder_request_t req;
         xed_encoder_instruction_t enc_inst;
 
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_CVTSS2SD, opWidth, substRip(op0, ripSubst), substRip(op1, ripSubst));
+        xed_inst2(&enc_inst, dstate, XED_ICLASS_CVTSS2SD, opWidth, subst(op0), subst(op1));
         xed_convert_to_encoder_request(&req, &enc_inst);
 
         internal_requests.push_back(req);
@@ -247,11 +250,11 @@ void Instruction::cvtss2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1)
 }
 
 void Instruction::movq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (xed_reg_enum_t ripSubst) {
+    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
         xed_encoder_request_t req;
         xed_encoder_instruction_t enc_inst;
 
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVQ, opWidth, substRip(op0, ripSubst), substRip(op1, ripSubst));
+        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVQ, opWidth, subst(op0), subst(op1));
         xed_convert_to_encoder_request(&req, &enc_inst);
 
         internal_requests.push_back(req);
@@ -288,6 +291,15 @@ bool Instruction::usesRipAddressing() const {
     return false;
 }
 
+bool Instruction::usesRspAddressing() const {
+    for (auto const& op : operands) {
+        if (op.hasRspBase()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 xed_reg_enum_t Instruction::getUnusedReg() {
     for (auto reg : gprs) {
         if (usedRegs.count(reg) == 0) {
@@ -311,14 +323,30 @@ void Instruction::withFreeReg(std::function<void(xed_reg_enum_t)> instr) {
     returnReg(reg);
 }
 
-void Instruction::withRipSubstitution(std::function<void(xed_reg_enum_t ripSubst)> instr) {
+void Instruction::withRipSubstitution(std::function<void(std::function<xed_encoder_operand_t(xed_encoder_operand_t subst)>)> instr) {
+    // TODO: do not replace RSP and RIP if we are compiling inline
     if (usesRipAddressing()) {
         withFreeReg([=](xed_reg_enum_t tempReg) {
             mov(tempReg, rip);
 
-            instr(tempReg);
+            instr([=](xed_encoder_operand_t op) { return substRip(op, tempReg, XED_REG_RSP); });
+        });
+    } else if (usesRspAddressing()) {
+        withFreeReg([=](xed_reg_enum_t tempReg) {
+            mov(tempReg, rsp);
+
+            instr([=](xed_encoder_operand_t op) { return substRip(op, XED_REG_RIP, tempReg); });
+        });
+    } else
+    if (usesRipAddressing() && usesRspAddressing()) {
+        withFreeReg([=](xed_reg_enum_t tempRipReg) {
+            mov(tempRipReg, rip);
+            withFreeReg([=](xed_reg_enum_t tempRspReg) {
+                mov(tempRspReg, rsp);
+                instr([=](xed_encoder_operand_t op) { return substRip(op, tempRipReg, tempRspReg); });
+            });
         });
     } else {
-        instr(XED_REG_RIP);
+        instr([](xed_encoder_operand_t op) { return op; });
     }
 }

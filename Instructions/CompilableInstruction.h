@@ -5,7 +5,7 @@
 template<class T>
 class CompilableInstruction : public Instruction {
 protected:
-    CompilableInstruction(uint64_t rip, const xed_decoded_inst_t *xedd) : Instruction(rip, xedd) {}
+    CompilableInstruction(uint64_t rip, uint64_t rsp, const xed_decoded_inst_t *xedd) : Instruction(rip, rsp, xedd) {}
 
     std::vector<xed_encoder_request_t> const& compile(ymm_t *ymm, CompilationStrategy compilationStrategy, uint64_t returnAddr = 0) {
         internal_requests.clear();

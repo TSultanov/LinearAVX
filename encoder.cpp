@@ -61,9 +61,9 @@ uint8_t *encode_requests(std::vector<xed_encoder_request_t> &requests, uint64_t 
             exit(1);
         }
 
-        xed_decoded_inst_t xedd;
-        uint32_t olen;
-        decode_instruction3(instr.buffer, &xedd, &olen);
+        // xed_decoded_inst_t xedd;
+        // uint32_t olen;
+        // decode_instruction3(instr.buffer, &xedd, &olen);
 
         encoded_instructions.push_back(instr);
     }
@@ -86,7 +86,7 @@ uint8_t *encode_requests(std::vector<xed_encoder_request_t> &requests, uint64_t 
 
 void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer,
                         const unsigned int ilen, unsigned int *olen,
-                        uint64_t tid, uint64_t rbp_value, uint64_t rip_value) {
+                        uint64_t tid, uint64_t rbp_value, uint64_t rip_value, uint64_t rsp_value) {
     xed_iclass_enum_t iclass = xed_decoded_inst_get_iclass(xedd);
 
     if (!iclassMapping.contains(iclass)) {
@@ -95,7 +95,7 @@ void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer,
     }
 
     auto instrFactory = iclassMapping.at(iclass);
-    std::shared_ptr<Instruction> instr = instrFactory(rip_value, xedd);
+    std::shared_ptr<Instruction> instr = instrFactory(rip_value, rsp_value, xedd);
 
     ymm_t *ymm = get_ymm_for_thread(tid);
     printf("YMM bank at %p for thread %llu\n", ymm, tid);

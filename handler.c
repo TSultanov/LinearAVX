@@ -179,7 +179,7 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     uint8_t buffer[XED_MAX_INSTRUCTION_BYTES];
     unsigned int olen;
 
-    encode_instruction(&xedd, buffer, initial_olen, &olen, tid, uc->uc_mcontext->__ss.__rbp, uc->uc_mcontext->__ss.__rip);
+    encode_instruction(&xedd, buffer, initial_olen, &olen, tid, uc->uc_mcontext->__ss.__rbp, uc->uc_mcontext->__ss.__rip, uc->uc_mcontext->__ss.__rsp);
 
     printf("Translated instruction:\n");
     printf("olen = %d\n", olen);
