@@ -25,9 +25,6 @@ enum class CompilationStrategy {
 };
 
 class Instruction {
-    const uint64_t rip;
-    const uint64_t rsp;
-
     const std::vector<xed_reg_enum_t> gprs = {
         XED_REG_RAX, XED_REG_RBX, XED_REG_RCX, XED_REG_RDX, XED_REG_RSI, XED_REG_RDI, XED_REG_R8, XED_REG_R9,
         XED_REG_R10, XED_REG_R11, XED_REG_R12, XED_REG_R13, XED_REG_R14, XED_REG_R15
@@ -37,6 +34,9 @@ class Instruction {
     const xed_bits_t vl;
     std::unordered_set<xed_reg_enum_t> usedRegs;
 protected:
+    const uint64_t rip;
+    const uint64_t rsp;
+
     const xed_inst_t *xi;
     const xed_encoder_request_t *xedd;
     std::vector<xed_encoder_request_t> internal_requests;

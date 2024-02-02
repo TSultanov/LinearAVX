@@ -1,6 +1,7 @@
 #include "CompilableInstruction.h"
 #include "xed/xed-decoded-inst-api.h"
 #include "xed/xed-operand-accessors.h"
+#include <unistd.h>
 
 class VMOVSD : public CompilableInstruction<VMOVSD> {
 public:
@@ -8,6 +9,7 @@ public:
 private:
     void implementation(bool upper, bool compile_inline, ymm_t *ymm) override {
         assert(operands.size() == 2 || operands.size() == 3);
+
         if (operands.size() == 2) {
             movsd(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
         }
@@ -15,6 +17,9 @@ private:
             movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
             movsd(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
         }
-        zeroupperInternal(ymm, operands[0]);
+
+        if (operands[0].isYmm() || operands[0].isXmm()) {
+            zeroupperInternal(ymm, operands[0]);
+        }
     }
 };

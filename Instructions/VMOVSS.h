@@ -1,6 +1,8 @@
 #include "CompilableInstruction.h"
 #include "xed/xed-decoded-inst-api.h"
 #include "xed/xed-operand-accessors.h"
+#include <cstdio>
+#include <unistd.h>
 
 class VMOVSS : public CompilableInstruction<VMOVSS> {
 public:
@@ -15,6 +17,9 @@ private:
             movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
             movss(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
         }
-        zeroupperInternal(ymm, operands[0]);
+
+        if (operands[0].isYmm() || operands[0].isXmm()) {
+            zeroupperInternal(ymm, operands[0]);
+        }
     }
 };

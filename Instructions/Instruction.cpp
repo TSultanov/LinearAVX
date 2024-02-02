@@ -262,24 +262,39 @@ void Instruction::movq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
 }
 
 void Instruction::zeroupperInternal(ymm_t * ymm, Operand const& op) {
+    printf("zeroupperInternal A\n");
     withFreeReg([=] (xed_reg_enum_t tempReg) {
+        printf("zeroupperInternal B\n");
         auto reg = op.toXmmReg();
         uint32_t regnum = reg - XED_REG_XMM0;
 
+        printf("zeroupperInternal C\n");
+
         mov(tempReg, (uint64_t)(&(ymm->l[regnum])));
         movups(xed_mem_b(tempReg, 128), reg);
 
+        printf("zeroupperInternal D\n");
+
         mov(tempReg, (uint64_t)(&(ymm->u[regnum])));
         movups(reg, xed_mem_b(tempReg, 128));
+
+        printf("zeroupperInternal E\n");
 
         xorps(xed_reg(reg), xed_reg(reg));
 
+        printf("zeroupperInternal F\n");
+
         mov(tempReg, (uint64_t)(&(ymm->u[regnum])));
         movups(xed_mem_b(tempReg, 128), reg);
 
+        printf("zeroupperInternal G\n");
+
         mov(tempReg, (uint64_t)(&(ymm->l[regnum])));
         movups(reg, xed_mem_b(tempReg, 128));
+
+        printf("zeroupperInternal H\n");
     });
+    printf("zeroupperInternal END\n");
 }
 
 bool Instruction::usesRipAddressing() const {
