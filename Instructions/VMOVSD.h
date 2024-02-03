@@ -5,7 +5,7 @@
 
 class VMOVSD : public CompilableInstruction<VMOVSD> {
 public:
-    VMOVSD(uint64_t rip, uint64_t rsp, const xed_decoded_inst_t *xedd) : CompilableInstruction(rip, rsp, xedd) {}
+    VMOVSD(uint64_t rip, const xed_decoded_inst_t *xedd) : CompilableInstruction(rip, xedd) {}
 private:
     void implementation(bool upper, bool compile_inline, ymm_t *ymm) override {
         assert(operands.size() == 2 || operands.size() == 3);

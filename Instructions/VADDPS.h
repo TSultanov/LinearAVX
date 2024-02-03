@@ -2,7 +2,7 @@
 
 class VADDPS : public CompilableInstruction<VADDPS> {
 public:
-    VADDPS(uint64_t rip, uint64_t rsp, const xed_decoded_inst_t *xedd) : CompilableInstruction(rip, rsp, xedd) {}
+    VADDPS(uint64_t rip, const xed_decoded_inst_t *xedd) : CompilableInstruction(rip, xedd) {}
 private:
     void implementation(bool upper, bool compile_inline, ymm_t *ymm) {
         if (operands[0].reg() == operands[1].reg()) {

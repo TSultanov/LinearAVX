@@ -7,13 +7,12 @@
 const xed_state_t dstate = {.mmode = XED_MACHINE_MODE_LONG_64,
                             .stack_addr_width = XED_ADDRESS_WIDTH_64b};
 
-Instruction::Instruction(uint64_t rip, uint64_t rsp, const xed_decoded_inst_t *xedd)
+Instruction::Instruction(uint64_t rip, const xed_decoded_inst_t *xedd)
 :xi(xed_decoded_inst_inst(xedd))
 ,opWidth(xed_decoded_inst_get_operand_width(xedd))
 ,vl(xed3_operand_get_vl(xedd))
 ,xedd(xedd)
 ,rip(rip)
-,rsp(rsp)
 {
     auto n_operands = xed_inst_noperands(xi);
     for (uint32_t i = 0; i < n_operands; i++) {
@@ -27,7 +26,7 @@ Instruction::Instruction(uint64_t rip, uint64_t rsp, const xed_decoded_inst_t *x
     }
 }
 
-xed_encoder_operand_t substRip(xed_encoder_operand_t op, xed_reg_enum_t ripSubstReg, xed_reg_enum_t rspSubstReg) {
+xed_encoder_operand_t substRip(xed_encoder_operand_t op, xed_reg_enum_t ripSubstReg) {
     if (op.type == XED_ENCODER_OPERAND_TYPE_MEM) {
         if (op.u.mem.base == XED_REG_RIP) {
             op.u.mem.base = ripSubstReg;
@@ -35,13 +34,21 @@ xed_encoder_operand_t substRip(xed_encoder_operand_t op, xed_reg_enum_t ripSubst
         if (op.u.mem.index == XED_REG_RIP) {
             op.u.mem.index = ripSubstReg;
         }
+        return op;
+    }
+
+    return op;
+}
+
+xed_encoder_operand_t offsetRsp(xed_encoder_operand_t op, int64_t offset) {
+    if (op.type == XED_ENCODER_OPERAND_TYPE_MEM) {
         if (op.u.mem.base == XED_REG_RSP) {
-            op.u.mem.base = rspSubstReg;
+            op.u.mem.disp.displacement += offset;
         }
         if (op.u.mem.index == XED_REG_RSP) {
-            op.u.mem.index = rspSubstReg;
+            printf("RSP index not supported\n");
+            exit(1);
         }
-        return op;
     }
 
     return op;
@@ -55,6 +62,7 @@ void Instruction::push(xed_encoder_operand_t op) {
     xed_convert_to_encoder_request(&req, &enc_inst);
 
     internal_requests.push_back(req);
+    rspOffset -= pointerWidthBytes;
 }
 
 void Instruction::push(xed_reg_enum_t reg) {
@@ -78,6 +86,7 @@ void Instruction::pop(xed_reg_enum_t reg) {
     xed_convert_to_encoder_request(&req, &enc_inst);
 
     internal_requests.push_back(req);
+    rspOffset += pointerWidthBytes;
 }
 
 void Instruction::mov(xed_reg_enum_t reg, uint64_t immediate) {
@@ -265,39 +274,24 @@ void Instruction::movq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
 }
 
 void Instruction::zeroupperInternal(ymm_t * ymm, Operand const& op) {
-    printf("zeroupperInternal A\n");
     withFreeReg([=] (xed_reg_enum_t tempReg) {
-        printf("zeroupperInternal B\n");
         auto reg = op.toXmmReg();
         uint32_t regnum = reg - XED_REG_XMM0;
 
-        printf("zeroupperInternal C\n");
-
         mov(tempReg, (uint64_t)(&(ymm->l[regnum])));
         movups(xed_mem_b(tempReg, 128), reg);
 
-        printf("zeroupperInternal D\n");
-
         mov(tempReg, (uint64_t)(&(ymm->u[regnum])));
         movups(reg, xed_mem_b(tempReg, 128));
-
-        printf("zeroupperInternal E\n");
 
         xorps(xed_reg(reg), xed_reg(reg));
 
-        printf("zeroupperInternal F\n");
-
         mov(tempReg, (uint64_t)(&(ymm->u[regnum])));
         movups(xed_mem_b(tempReg, 128), reg);
 
-        printf("zeroupperInternal G\n");
-
         mov(tempReg, (uint64_t)(&(ymm->l[regnum])));
         movups(reg, xed_mem_b(tempReg, 128));
-
-        printf("zeroupperInternal H\n");
     });
-    printf("zeroupperInternal END\n");
 }
 
 bool Instruction::usesRipAddressing() const {
@@ -342,28 +336,20 @@ void Instruction::withFreeReg(std::function<void(xed_reg_enum_t)> instr) {
 }
 
 void Instruction::withRipSubstitution(std::function<void(std::function<xed_encoder_operand_t(xed_encoder_operand_t subst)>)> instr) {
-    // TODO: do not replace RSP and RIP if we are compiling inline
+    // TODO: do not replace RIP if we are compiling inline
     if (usesRipAddressing()) {
         withFreeReg([=](xed_reg_enum_t tempReg) {
             mov(tempReg, rip);
 
-            instr([=](xed_encoder_operand_t op) { return substRip(op, tempReg, XED_REG_RSP); });
+            instr([=](xed_encoder_operand_t op) { return substRip(op, tempReg); });
         });
     } else if (usesRspAddressing()) {
-        withFreeReg([=](xed_reg_enum_t tempReg) {
-            mov(tempReg, rsp); // this is wrong. There is no guarantee that RSP will be same on each call.
-            // TODO: use RSP from the current instruction, not the next one.
-
-            instr([=](xed_encoder_operand_t op) { return substRip(op, XED_REG_RIP, tempReg); });
-        });
+        instr([=](xed_encoder_operand_t op) { return offsetRsp(op, rspOffset); });
     } else
     if (usesRipAddressing() && usesRspAddressing()) {
         withFreeReg([=](xed_reg_enum_t tempRipReg) {
             mov(tempRipReg, rip);
-            withFreeReg([=](xed_reg_enum_t tempRspReg) {
-                mov(tempRspReg, rsp);
-                instr([=](xed_encoder_operand_t op) { return substRip(op, tempRipReg, tempRspReg); });
-            });
+            instr([=](xed_encoder_operand_t op) { return offsetRsp(substRip(op, tempRipReg), rspOffset); });
         });
     } else {
         instr([](xed_encoder_operand_t op) { return op; });
