@@ -53,6 +53,8 @@ protected:
     void push(xed_reg_enum_t reg);
     void pop(xed_reg_enum_t reg);
     void ret();
+    void sub(xed_reg_enum_t reg, int8_t immediate);
+    void add(xed_reg_enum_t reg, int8_t immediate);
     void mov(xed_reg_enum_t reg, uint64_t immediate);
     void movups(xed_reg_enum_t reg, xed_encoder_operand_t mem);
     void movups(xed_encoder_operand_t mem, xed_reg_enum_t reg);
@@ -61,6 +63,7 @@ protected:
     void movss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void movdqu(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void xorps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void insertps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
     void addps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
@@ -79,7 +82,7 @@ protected:
     void withFreeReg(std::function<void(xed_reg_enum_t)> instr);
     void withRipSubstitution(std::function<void(std::function<xed_encoder_operand_t(xed_encoder_operand_t)>)> instr);
 
-    void withPreserveXmmReg(ymm_t *ymm, xed_reg_enum_t reg, std::function<void()> instr);
+    void withPreserveXmmReg(Operand const& op, std::function<void()> instr);
     public:
     virtual std::vector<xed_encoder_request_t> const& compile(ymm_t *ymm, CompilationStrategy compilationStrategy, uint64_t returnAddr = 0) = 0;
 };

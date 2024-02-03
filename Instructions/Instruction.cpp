@@ -3,6 +3,8 @@
 #include "xed/xed-encoder-hl.h"
 #include "xed/xed-iclass-enum.h"
 #include "xed/xed-reg-enum.h"
+#include <cstdio>
+#include <unistd.h>
 
 const xed_state_t dstate = {.mmode = XED_MACHINE_MODE_LONG_64,
                             .stack_addr_width = XED_ADDRESS_WIDTH_64b};
@@ -273,6 +275,18 @@ void Instruction::movq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     });
 }
 
+void Instruction::movdqu(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
+        xed_encoder_request_t req;
+        xed_encoder_instruction_t enc_inst;
+
+        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVDQU, opWidth, subst(op0), subst(op1));
+        xed_convert_to_encoder_request(&req, &enc_inst);
+
+        internal_requests.push_back(req);
+    });
+}
+
 void Instruction::zeroupperInternal(ymm_t * ymm, Operand const& op) {
     withFreeReg([=] (xed_reg_enum_t tempReg) {
         auto reg = op.toXmmReg();
@@ -354,4 +368,50 @@ void Instruction::withRipSubstitution(std::function<void(std::function<xed_encod
     } else {
         instr([](xed_encoder_operand_t op) { return op; });
     }
+}
+
+void Instruction::sub(xed_reg_enum_t reg, int8_t immediate) {
+    xed_encoder_request_t req;
+    xed_encoder_instruction_t enc_inst;
+
+    xed_inst2(&enc_inst, dstate, XED_ICLASS_SUB, opWidth, xed_reg(reg), xed_imm0(immediate, 8));
+    xed_convert_to_encoder_request(&req, &enc_inst);
+
+    internal_requests.push_back(req);
+
+    if (reg == XED_REG_RSP) {
+        rspOffset -= immediate;
+    }
+}
+
+void Instruction::add(xed_reg_enum_t reg, int8_t immediate) {
+    xed_encoder_request_t req;
+    xed_encoder_instruction_t enc_inst;
+
+    xed_inst2(&enc_inst, dstate, XED_ICLASS_ADD, opWidth, xed_reg(reg), xed_imm0(immediate, 8));
+    xed_convert_to_encoder_request(&req, &enc_inst);
+
+    internal_requests.push_back(req);
+
+    if (reg == XED_REG_RSP) {
+        rspOffset += immediate;
+    }
+}
+
+void Instruction::withPreserveXmmReg(Operand const& op, std::function<void()> instr) {
+    if (op.isYmm()) {
+        printf("Preserving YMM is not supported yet\n");
+    }
+
+    if (!op.isXmm()) {
+        printf("Only XMM registers are supported\n");
+    }
+
+    sub(XED_REG_ESP, 16);
+    movdqu(xed_mem_b(XED_REG_RSP, 128), op.toEncoderOperand(false));
+
+    instr();
+
+    movdqu(op.toEncoderOperand(false), xed_mem_b(XED_REG_RSP, 128));
+    add(XED_REG_ESP, 16);
 }

@@ -98,7 +98,7 @@ void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer,
     std::shared_ptr<Instruction> instr = instrFactory(rip_value, xedd);
 
     ymm_t *ymm = get_ymm_for_thread(tid);
-    printf("YMM bank at %p for thread %llu\n", ymm, tid);
+    // printf("YMM bank at %p for thread %llu\n", ymm, tid);
     auto requests = instr->compile(ymm, CompilationStrategy::DirectCall);
 
     uint64_t chunk_length = 0;
