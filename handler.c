@@ -78,6 +78,17 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     printf("R14: %llx\n", uc->uc_mcontext->__ss.__r14);
     printf("R15: %llx\n", uc->uc_mcontext->__ss.__r15);
 
+    // print memory at RAX for 16 bytes
+    // if (uc->uc_mcontext->__ss.__rip == 0x140001620) {
+    //     printf("Memory at RAX:\n");
+    //     uint8_t membuff[32];
+    //     memcpy(membuff, (unsigned char*)uc->uc_mcontext->__ss.__rax, 32);
+    //     for (int i = 0; i < 32; i++) {
+    //         printf("%01x ", membuff[i]);
+    //     }
+    //     printf("\n");
+    // }
+
     // print XMM
     ymm_t* ymm_state = get_ymm_for_thread(tid);
 
