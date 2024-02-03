@@ -30,6 +30,10 @@ xed_reg_enum_t Operand::toXmmReg() const {
     return m_reg;
 }
 
+uint64_t Operand::immValue() const {
+    return xed_decoded_inst_get_unsigned_immediate(xedd);
+}
+
 uint8_t Operand::imm8Value() const {
     return xed_decoded_inst_get_second_immediate(xedd);
 }

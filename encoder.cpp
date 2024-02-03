@@ -107,14 +107,14 @@ void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer,
     printf("chunk_length = %llu\n", chunk_length);
 
     bool inline_compiled = false;
-    if (chunk_length - 1 <= ilen) {
-        printf("JITted instructions should fit inline, recompiling for inline\n");
-        requests = instr->compile(ymm, CompilationStrategy::Inline);
+    // if (chunk_length - 1 <= ilen) {
+    //     printf("JITted instructions should fit inline, recompiling for inline\n");
+    //     requests = instr->compile(ymm, CompilationStrategy::Inline);
 
-        chunk_length = 0;
-        chunk = encode_requests(requests, &chunk_length);
-        inline_compiled = true;
-    }
+    //     chunk_length = 0;
+    //     chunk = encode_requests(requests, &chunk_length);
+    //     inline_compiled = true;
+    // }
 
     if (inline_compiled) {
         memcpy(buffer, chunk, chunk_length);

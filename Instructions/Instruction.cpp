@@ -5,6 +5,7 @@
 #include "xed/xed-reg-enum.h"
 #include <cstdio>
 #include <unistd.h>
+#include <unordered_map>
 
 const xed_state_t dstate = {.mmode = XED_MACHINE_MODE_LONG_64,
                             .stack_addr_width = XED_ADDRESS_WIDTH_64b};
@@ -175,9 +176,15 @@ void Instruction::xorps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
 
 void Instruction::swap_in_upper_ymm(ymm_t *ymm, bool force) {
     withFreeReg([=] (xed_reg_enum_t tempReg) {
+        std::unordered_set<xed_reg_enum_t> usedRegs;
+
         for (auto& op : operands) {
             if (op.isYmm() || (op.isXmm() && force)) {
                 auto reg = op.toXmmReg();
+                if (usedRegs.contains(reg)) {
+                    continue;
+                }
+                usedRegs.insert(reg);
                 uint32_t regnum = reg - XED_REG_XMM0;
 
                 mov(tempReg, (uint64_t)(&(ymm->l[regnum])));
@@ -192,9 +199,15 @@ void Instruction::swap_in_upper_ymm(ymm_t *ymm, bool force) {
 
 void Instruction::swap_out_upper_ymm(ymm_t *ymm, bool force) {
     withFreeReg([=] (xed_reg_enum_t tempReg) {
+        std::unordered_set<xed_reg_enum_t> usedRegs;
+
         for (auto& op : operands) {
             if (op.isYmm() || (op.isXmm() && force)) {
                 auto reg = op.toXmmReg();
+                if (usedRegs.contains(reg)) {
+                    continue;
+                }
+                usedRegs.insert(reg);
                 uint32_t regnum = reg - XED_REG_XMM0;
 
                 mov(tempReg, (uint64_t)(&(ymm->u[regnum])));

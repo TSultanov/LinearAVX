@@ -11,5 +11,7 @@ private:
             movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
             cvtss2sd(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
         }
+
+        zeroupperInternal(ymm, operands[0]);
     }
 };
