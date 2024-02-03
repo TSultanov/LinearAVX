@@ -1,4 +1,4 @@
-*Note*: this is an experiment and currently even trivial programs cannot be executed correctly
+**Note**: this is an experiment and currently only few trivial programs cen be executed
 
 LinearAVX is an attempt at implementing a JIT for AVX instructions, mainly targeting Rosetta and Wine
 
