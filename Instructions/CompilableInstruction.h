@@ -10,6 +10,10 @@ protected:
     std::vector<xed_encoder_request_t> const& compile(ymm_t *ymm, CompilationStrategy compilationStrategy, uint64_t returnAddr = 0) {
         internal_requests.clear();
 
+        if (compilationStrategy != CompilationStrategy::Inline) {
+            rspOffset = -8;
+        }
+
         // if (compilationStrategy == CompilationStrategy::ExceptionCall) {
         //     push(xed_imm0(returnAddr, 64));
         // }

@@ -45,7 +45,7 @@ xed_encoder_operand_t substRip(xed_encoder_operand_t op, xed_reg_enum_t ripSubst
 xed_encoder_operand_t offsetRsp(xed_encoder_operand_t op, int64_t offset) {
     if (op.type == XED_ENCODER_OPERAND_TYPE_MEM) {
         if (op.u.mem.base == XED_REG_RSP) {
-            op.u.mem.disp.displacement += offset;
+            op.u.mem.disp.displacement -= offset;
         }
         if (op.u.mem.index == XED_REG_RSP) {
             printf("RSP index not supported\n");
@@ -379,7 +379,7 @@ void Instruction::sub(xed_reg_enum_t reg, int8_t immediate) {
 
     internal_requests.push_back(req);
 
-    if (reg == XED_REG_RSP) {
+    if (reg == XED_REG_RSP || reg == XED_REG_ESP) {
         rspOffset -= immediate;
     }
 }
@@ -393,7 +393,7 @@ void Instruction::add(xed_reg_enum_t reg, int8_t immediate) {
 
     internal_requests.push_back(req);
 
-    if (reg == XED_REG_RSP) {
+    if (reg == XED_REG_RSP || reg == XED_REG_ESP) {
         rspOffset += immediate;
     }
 }

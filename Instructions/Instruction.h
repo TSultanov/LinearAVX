@@ -36,8 +36,8 @@ class Instruction {
     const xed_bits_t vl;
     std::unordered_set<xed_reg_enum_t> usedRegs;
 
-    int64_t rspOffset = 0;
 protected:
+    int64_t rspOffset = 0;
     const uint64_t rip;
 
     const xed_inst_t *xi;
