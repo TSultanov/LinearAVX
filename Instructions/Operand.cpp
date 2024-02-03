@@ -95,15 +95,13 @@ xed_encoder_operand_t Operand::toEncoderOperand(bool upper) const {
 
         if (upper) {
             displacement += 16;
-            if (width == 0) {
-                width = 8;
-            }
         }
+        width = 32;
 
-        // printf("mem_width: %d\n", mem_width);
-        // printf("actual_mem_width: %d\n", actual_mem_width);
-        // printf("displacement width = %d\n", width);
-        // printf("displacement: %lld\n", displacement);
+        printf("mem_width: %d\n", mem_width);
+        printf("actual_mem_width: %d\n", actual_mem_width);
+        printf("displacement width = %d\n", width);
+        printf("displacement: %llx\n", displacement);
 
         auto disp = xed_disp(
             displacement, 
