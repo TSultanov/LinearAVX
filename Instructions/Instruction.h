@@ -68,6 +68,7 @@ protected:
     void insertps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
     void addps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvtss2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void shufps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
     void swap_in_upper_ymm(ymm_t *ymm, bool force = false);
     void swap_out_upper_ymm(ymm_t *ymm, bool force = false);
     void with_upper_ymm(ymm_t *ymm, std::function<void()> instr);

@@ -300,6 +300,18 @@ void Instruction::movdqu(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     });
 }
 
+void Instruction::shufps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3) {
+    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
+        xed_encoder_request_t req;
+        xed_encoder_instruction_t enc_inst;
+
+        xed_inst3(&enc_inst, dstate, XED_ICLASS_SHUFPS, opWidth, subst(op0), subst(op1), subst(op3));
+        xed_convert_to_encoder_request(&req, &enc_inst);
+
+        internal_requests.push_back(req);
+    });
+}
+
 void Instruction::zeroupperInternal(ymm_t * ymm, Operand const& op) {
     withFreeReg([=] (xed_reg_enum_t tempReg) {
         auto reg = op.toXmmReg();
