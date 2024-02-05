@@ -39,13 +39,14 @@ class Instruction {
 protected:
     int64_t rspOffset = 0;
     const uint64_t rip;
+    const uint8_t ilen;
 
     const xed_inst_t *xi;
     const xed_encoder_request_t *xedd;
     std::vector<xed_encoder_request_t> internal_requests;
     std::vector<Operand> operands;
 
-    Instruction(uint64_t rip, const xed_decoded_inst_t *xedd);
+    Instruction(uint64_t rip, uint8_t ilen, const xed_decoded_inst_t *xedd);
 
     bool usesYmm() const;
 

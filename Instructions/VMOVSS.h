@@ -6,7 +6,7 @@
 
 class VMOVSS : public CompilableInstruction<VMOVSS> {
 public:
-    VMOVSS(uint64_t rip, const xed_decoded_inst_t *xedd) : CompilableInstruction(rip, xedd) {}
+    VMOVSS(uint64_t rip, uint8_t ilen, const xed_decoded_inst_t *xedd) : CompilableInstruction(rip, ilen, xedd) {}
 private:
     void implementation(bool upper, bool compile_inline, ymm_t* ymm) override {
         assert(operands.size() == 2 || operands.size() == 3);

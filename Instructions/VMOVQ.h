@@ -4,7 +4,7 @@
 
 class VMOVQ : public CompilableInstruction<VMOVQ> {
 public:
-    VMOVQ(uint64_t rip, const xed_decoded_inst_t *xedd) : CompilableInstruction(rip, xedd) {}
+    VMOVQ(uint64_t rip, uint8_t ilen, const xed_decoded_inst_t *xedd) : CompilableInstruction(rip, ilen, xedd) {}
 private:
     void implementation(bool upper, bool compile_inline, ymm_t *ymm) override {
         movq(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));

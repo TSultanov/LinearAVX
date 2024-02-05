@@ -10,12 +10,13 @@
 const xed_state_t dstate = {.mmode = XED_MACHINE_MODE_LONG_64,
                             .stack_addr_width = XED_ADDRESS_WIDTH_64b};
 
-Instruction::Instruction(uint64_t rip, const xed_decoded_inst_t *xedd)
+Instruction::Instruction(uint64_t rip, uint8_t ilen, const xed_decoded_inst_t *xedd)
 :xi(xed_decoded_inst_inst(xedd))
 ,opWidth(xed_decoded_inst_get_operand_width(xedd))
 ,vl(xed3_operand_get_vl(xedd))
 ,xedd(xedd)
 ,rip(rip)
+,ilen(ilen)
 {
     auto n_operands = xed_inst_noperands(xi);
     for (uint32_t i = 0; i < n_operands; i++) {
@@ -390,7 +391,7 @@ void Instruction::withRipSubstitution(std::function<void(std::function<xed_encod
     // TODO: do not replace RIP if we are compiling inline
     if (usesRipAddressing()) {
         withFreeReg([=](xed_reg_enum_t tempReg) {
-            mov(tempReg, rip);
+            mov(tempReg, rip+ilen);
 
             instr([=](xed_encoder_operand_t op) { return substRip(op, tempReg); });
         });
@@ -400,7 +401,16 @@ void Instruction::withRipSubstitution(std::function<void(std::function<xed_encod
     if (usesRipAddressing() && usesRspAddressing()) {
         withFreeReg([=](xed_reg_enum_t tempRipReg) {
             mov(tempRipReg, rip);
-            instr([=](xed_encoder_operand_t op) { return offsetRsp(substRip(op, tempRipReg), rspOffset); });
+            instr([=](xed_encoder_operand_t op) {
+                if (op.type == XED_ENCODER_OPERAND_TYPE_MEM) {
+                    if (op.u.mem.base == XED_REG_RSP || op.u.mem.base == XED_REG_ESP) {
+                        return offsetRsp(substRip(op, tempRipReg), rspOffset);
+                    } else {
+                        return substRip(op, tempRipReg);
+                    }
+                }
+                return op;
+            });
         });
     } else {
         instr([](xed_encoder_operand_t op) { return op; });

@@ -95,7 +95,7 @@ void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer,
     }
 
     auto instrFactory = iclassMapping.at(iclass);
-    std::shared_ptr<Instruction> instr = instrFactory(rip_value, xedd);
+    std::shared_ptr<Instruction> instr = instrFactory(rip_value, ilen, xedd);
 
     ymm_t *ymm = get_ymm_for_thread(tid);
     // printf("YMM bank at %p for thread %llu\n", ymm, tid);
