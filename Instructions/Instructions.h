@@ -13,6 +13,8 @@
 #include "VMOVQ.h"
 #include "VEXTRACTF128.h"
 #include "VSHUFPS.h"
+#include "VBROADCASTSS.h"
+#include "VMOVDQA.h"
 #include <map>
 
 #ifdef __cplusplus
@@ -43,5 +45,7 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VMOVSD),
     ICLASSMAP(VMOVQ),
     ICLASSMAP(VEXTRACTF128),
-    ICLASSMAP(VSHUFPS)
+    ICLASSMAP(VSHUFPS),
+    ICLASSMAP(VBROADCASTSS),
+    ICLASSMAP(VMOVDQA)
 };

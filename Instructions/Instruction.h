@@ -64,6 +64,7 @@ protected:
     void movsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movdqu(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void movdqa(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void xorps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void insertps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
     void addps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
