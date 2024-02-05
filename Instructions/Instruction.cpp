@@ -103,6 +103,33 @@ void Instruction::mov(xed_reg_enum_t reg, uint64_t immediate) {
     internal_requests.push_back(req);
 }
 
+
+void Instruction::op2(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+        withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
+        xed_encoder_request_t req;
+        xed_encoder_instruction_t enc_inst;
+
+        xed_inst2(&enc_inst, dstate, instr, opWidth, subst(op0), subst(op1));
+        xed_convert_to_encoder_request(&req, &enc_inst);
+        xed3_operand_set_vl(&req, vl);
+
+        internal_requests.push_back(req);
+    });
+}
+
+void Instruction::op3(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+        withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
+        xed_encoder_request_t req;
+        xed_encoder_instruction_t enc_inst;
+
+        xed_inst3(&enc_inst, dstate, instr, opWidth, subst(op0), subst(op1), subst(op2));
+        xed_convert_to_encoder_request(&req, &enc_inst);
+        xed3_operand_set_vl(&req, vl);
+
+        internal_requests.push_back(req);
+    });
+}
+
 void Instruction::movups(xed_reg_enum_t reg, xed_encoder_operand_t mem) {
     movups(xed_reg(reg), mem);
 }
@@ -112,67 +139,51 @@ void Instruction::movups(xed_encoder_operand_t mem, xed_reg_enum_t reg) {
 }
 
 void Instruction::movups(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
-        xed_encoder_request_t req;
-        xed_encoder_instruction_t enc_inst;
-
-        // printf("opWidth = %d\n", opWidth);
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVUPS, opWidth, subst(op0), subst(op1));
-        xed_convert_to_encoder_request(&req, &enc_inst);
-        xed3_operand_set_vl(&req, vl);
-
-        internal_requests.push_back(req);
-    });
+    op2(XED_ICLASS_MOVUPS, op0, op1);
 }
 
 void Instruction::movaps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
-        xed_encoder_request_t req;
-        xed_encoder_instruction_t enc_inst;
-
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVAPS, 0, subst(op0), subst(op1));
-        xed_convert_to_encoder_request(&req, &enc_inst);
-
-        internal_requests.push_back(req);
-    });
+    op2(XED_ICLASS_MOVAPS, op0, op1);
 }
 
 void Instruction::movss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
-        xed_encoder_request_t req;
-        xed_encoder_instruction_t enc_inst;
-
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVSS, opWidth, subst(op0), subst(op1));
-        xed_convert_to_encoder_request(&req, &enc_inst);
-        xed3_operand_set_vl(&req, vl);
-
-        internal_requests.push_back(req);
-    });
+    op2(XED_ICLASS_MOVSS, op0, op1);
 }
 
 void Instruction::movsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
-        xed_encoder_request_t req;
-        xed_encoder_instruction_t enc_inst;
-
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVSD_XMM, opWidth, subst(op0), subst(op1));
-        xed_convert_to_encoder_request(&req, &enc_inst);
-        xed3_operand_set_vl(&req, vl);
-
-        internal_requests.push_back(req);
-    });
+    op2(XED_ICLASS_MOVSD_XMM, op0, op1);
 }
 
 void Instruction::xorps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
-        xed_encoder_request_t req;
-        xed_encoder_instruction_t enc_inst;
+    op2(XED_ICLASS_XORPS, op0, op1);
+}
 
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_XORPS, 0, subst(op0), subst(op1));
-        xed_convert_to_encoder_request(&req, &enc_inst);
+void Instruction::insertps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_INSERTPS, op0, op1, op2);
+}
 
-        internal_requests.push_back(req);
-    });
+void Instruction::addps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_ADDPS, op0, op1);
+}
+
+void Instruction::cvtss2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_CVTSS2SD, op0, op1);
+}
+
+void Instruction::movq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_MOVQ, op0, op1);
+}
+
+void Instruction::movdqu(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_MOVDQU, op0, op1);
+}
+
+void Instruction::movdqa(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_MOVDQA, op0, op1);
+}
+
+void Instruction::shufps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_SHUFPS, op0, op1, op2);
 }
 
 void Instruction::swap_in_upper_ymm(ymm_t *ymm, bool force) {
@@ -237,92 +248,6 @@ bool Instruction::usesYmm() const {
         }
     }
     return false;
-}
-
-void Instruction::insertps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
-    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
-        xed_encoder_request_t req;
-        xed_encoder_instruction_t enc_inst;
-
-        xed_inst3(&enc_inst, dstate, XED_ICLASS_INSERTPS, opWidth, subst(op0), subst(op1), subst(op2));
-        xed_convert_to_encoder_request(&req, &enc_inst);
-        xed3_operand_set_vl(&req, vl);
-
-        internal_requests.push_back(req);
-    });
-}
-
-void Instruction::addps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
-        xed_encoder_request_t req;
-        xed_encoder_instruction_t enc_inst;
-
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_ADDPS, opWidth, subst(op0), subst(op1));
-        xed_convert_to_encoder_request(&req, &enc_inst);
-        xed3_operand_set_vl(&req, vl);
-
-        internal_requests.push_back(req);
-    });
-}
-
-void Instruction::cvtss2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
-        xed_encoder_request_t req;
-        xed_encoder_instruction_t enc_inst;
-
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_CVTSS2SD, opWidth, subst(op0), subst(op1));
-        xed_convert_to_encoder_request(&req, &enc_inst);
-
-        internal_requests.push_back(req);
-    });
-}
-
-void Instruction::movq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
-        xed_encoder_request_t req;
-        xed_encoder_instruction_t enc_inst;
-
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVQ, opWidth, subst(op0), subst(op1));
-        xed_convert_to_encoder_request(&req, &enc_inst);
-
-        internal_requests.push_back(req);
-    });
-}
-
-void Instruction::movdqu(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
-        xed_encoder_request_t req;
-        xed_encoder_instruction_t enc_inst;
-
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVDQU, opWidth, subst(op0), subst(op1));
-        xed_convert_to_encoder_request(&req, &enc_inst);
-
-        internal_requests.push_back(req);
-    });
-}
-
-void Instruction::movdqa(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
-        xed_encoder_request_t req;
-        xed_encoder_instruction_t enc_inst;
-
-        xed_inst2(&enc_inst, dstate, XED_ICLASS_MOVDQA, opWidth, subst(op0), subst(op1));
-        xed_convert_to_encoder_request(&req, &enc_inst);
-
-        internal_requests.push_back(req);
-    });
-}
-
-void Instruction::shufps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3) {
-    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
-        xed_encoder_request_t req;
-        xed_encoder_instruction_t enc_inst;
-
-        xed_inst3(&enc_inst, dstate, XED_ICLASS_SHUFPS, opWidth, subst(op0), subst(op1), subst(op3));
-        xed_convert_to_encoder_request(&req, &enc_inst);
-
-        internal_requests.push_back(req);
-    });
 }
 
 void Instruction::zeroupperInternal(ymm_t * ymm, Operand const& op) {
