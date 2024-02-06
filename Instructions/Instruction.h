@@ -77,6 +77,7 @@ protected:
     void pxor(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void unpckhps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void pcmpeqq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void blendvpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
 
     void op3(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
     void op2(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1);
@@ -96,6 +97,7 @@ protected:
     void withRipSubstitution(std::function<void(std::function<xed_encoder_operand_t(xed_encoder_operand_t)>)> instr);
 
     void withPreserveXmmReg(Operand const& op, std::function<void()> instr);
+    void withPreserveXmmReg(xed_reg_enum_t reg, std::function<void()> instr);
     public:
     virtual std::vector<xed_encoder_request_t> const& compile(ymm_t *ymm, CompilationStrategy compilationStrategy, uint64_t returnAddr = 0) = 0;
     xed_iform_enum_t getIform() const;

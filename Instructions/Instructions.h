@@ -19,6 +19,7 @@
 #include "VUNPCKHPS.h"
 #include "VXORPD.h"
 #include "VPCMPEQQ.h"
+#include "VBLENDVPD.h"
 #include <map>
 
 #ifdef __cplusplus
@@ -55,5 +56,6 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VPXOR),
     ICLASSMAP(VUNPCKHPS),
     ICLASSMAP(VXORPD),
-    ICLASSMAP(VPCMPEQQ)
+    ICLASSMAP(VPCMPEQQ),
+    ICLASSMAP(VBLENDVPD)
 };

@@ -204,6 +204,10 @@ void Instruction::pcmpeqq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) 
     op2(XED_ICLASS_PCMPEQQ, op0, op1);
 }
 
+void Instruction::blendvpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_BLENDVPD, op0, op1);
+}
+
 void Instruction::swap_in_upper_ymm(ymm_t *ymm, bool force) {
     withFreeReg([=] (xed_reg_enum_t tempReg) {
         std::unordered_set<xed_reg_enum_t> usedRegs;
@@ -397,12 +401,16 @@ void Instruction::withPreserveXmmReg(Operand const& op, std::function<void()> in
         printf("Only XMM registers are supported\n");
     }
 
+    withPreserveXmmReg(op.toXmmReg(), instr);
+}
+
+void Instruction::withPreserveXmmReg(xed_reg_enum_t reg, std::function<void()> instr) {
     sub(XED_REG_ESP, 16);
-    movdqu(xed_mem_b(XED_REG_RSP, 128), op.toEncoderOperand(false));
+    movdqu(xed_mem_b(XED_REG_RSP, 128), xed_reg(reg));
 
     instr();
 
-    movdqu(op.toEncoderOperand(false), xed_mem_b(XED_REG_RSP, 128));
+    movdqu(xed_reg(reg), xed_mem_b(XED_REG_RSP, 128));
     add(XED_REG_ESP, 16);
 }
 
