@@ -1,6 +1,7 @@
 #pragma once
 
 #include "xed/xed-iclass-enum.h"
+#include "xed/xed-iform-enum.h"
 #include <unordered_set>
 #ifdef __cplusplus
 extern "C" {
@@ -22,7 +23,7 @@ extern "C" {
 enum class CompilationStrategy {
     DirectCall,
     Inline,
-    // ExceptionCall
+    FarJump
 };
 
 class Instruction {
@@ -43,11 +44,11 @@ protected:
     const uint8_t ilen;
 
     const xed_inst_t *xi;
-    const xed_encoder_request_t *xedd;
+    const xed_encoder_request_t xedd;
     std::vector<xed_encoder_request_t> internal_requests;
     std::vector<Operand> operands;
 
-    Instruction(uint64_t rip, uint8_t ilen, const xed_decoded_inst_t *xedd);
+    Instruction(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd);
 
     bool usesYmm() const;
 
@@ -93,4 +94,5 @@ protected:
     void withPreserveXmmReg(Operand const& op, std::function<void()> instr);
     public:
     virtual std::vector<xed_encoder_request_t> const& compile(ymm_t *ymm, CompilationStrategy compilationStrategy, uint64_t returnAddr = 0) = 0;
+    xed_iform_enum_t getIform() const;
 };

@@ -5,18 +5,14 @@
 template<class T>
 class CompilableInstruction : public Instruction {
 protected:
-    CompilableInstruction(uint64_t rip, uint8_t ilen, const xed_decoded_inst_t *xedd) : Instruction(rip, ilen, xedd) {}
+    CompilableInstruction(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd) : Instruction(rip, ilen, xedd) {}
 
     std::vector<xed_encoder_request_t> const& compile(ymm_t *ymm, CompilationStrategy compilationStrategy, uint64_t returnAddr = 0) {
         internal_requests.clear();
 
-        if (compilationStrategy != CompilationStrategy::Inline) {
+        if (compilationStrategy == CompilationStrategy::DirectCall) {
             rspOffset = -8;
         }
-
-        // if (compilationStrategy == CompilationStrategy::ExceptionCall) {
-        //     push(xed_imm0(returnAddr, 64));
-        // }
 
         implementation(false, compilationStrategy == CompilationStrategy::Inline, ymm);
 
@@ -24,10 +20,6 @@ protected:
             with_upper_ymm(ymm, [=, this]{
                 implementation(true, compilationStrategy == CompilationStrategy::Inline, ymm);
             });
-        }
-
-        if (compilationStrategy != CompilationStrategy::Inline) {
-            ret();
         }
         
         return internal_requests;

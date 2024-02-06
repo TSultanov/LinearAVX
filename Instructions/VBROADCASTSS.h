@@ -6,7 +6,7 @@
 
 class VBROADCASTSS : public CompilableInstruction<VBROADCASTSS> {
 public:
-    VBROADCASTSS(uint64_t rip, uint8_t ilen, const xed_decoded_inst_t *xedd) : CompilableInstruction(rip, ilen, xedd) {}
+    VBROADCASTSS(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd) : CompilableInstruction(rip, ilen, xedd) {}
 private:
     void implementation(bool upper, bool compile_inline, ymm_t *ymm) override {
         for (int i = 0; i < 4; i++) {

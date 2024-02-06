@@ -15,6 +15,8 @@ add_library(avxhandler SHARED
     memmanager.h
     printinstr.h
     printinstr.c
+    Compiler/Compiler.h
+    Compiler/Compiler.cpp
     Instructions/Instructions.h
     Instructions/Instruction.h
     Instructions/Instruction.cpp

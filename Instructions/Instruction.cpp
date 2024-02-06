@@ -1,7 +1,9 @@
 #include "Instruction.h"
+#include "xed/xed-decoded-inst-api.h"
 #include "xed/xed-encode.h"
 #include "xed/xed-encoder-hl.h"
 #include "xed/xed-iclass-enum.h"
+#include "xed/xed-iform-enum.h"
 #include "xed/xed-reg-enum.h"
 #include <cstdio>
 #include <unistd.h>
@@ -10,17 +12,17 @@
 const xed_state_t dstate = {.mmode = XED_MACHINE_MODE_LONG_64,
                             .stack_addr_width = XED_ADDRESS_WIDTH_64b};
 
-Instruction::Instruction(uint64_t rip, uint8_t ilen, const xed_decoded_inst_t *xedd)
-:xi(xed_decoded_inst_inst(xedd))
-,opWidth(xed_decoded_inst_get_operand_width(xedd))
-,vl(xed3_operand_get_vl(xedd))
+Instruction::Instruction(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd)
+:xi(xed_decoded_inst_inst(&xedd))
+,opWidth(xed_decoded_inst_get_operand_width(&xedd))
+,vl(xed3_operand_get_vl(&xedd))
 ,xedd(xedd)
 ,rip(rip)
 ,ilen(ilen)
 {
     auto n_operands = xed_inst_noperands(xi);
     for (uint32_t i = 0; i < n_operands; i++) {
-        operands.emplace_back(Operand(xedd, i));
+        operands.emplace_back(Operand(&this->xedd, i));
     }
 
     for (auto const& op : operands) {
@@ -105,7 +107,7 @@ void Instruction::mov(xed_reg_enum_t reg, uint64_t immediate) {
 
 
 void Instruction::op2(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-        withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
+    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
         xed_encoder_request_t req;
         xed_encoder_instruction_t enc_inst;
 
@@ -118,7 +120,7 @@ void Instruction::op2(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_en
 }
 
 void Instruction::op3(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
-        withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
+    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
         xed_encoder_request_t req;
         xed_encoder_instruction_t enc_inst;
 
@@ -386,4 +388,8 @@ void Instruction::withPreserveXmmReg(Operand const& op, std::function<void()> in
 
     movdqu(op.toEncoderOperand(false), xed_mem_b(XED_REG_RSP, 128));
     add(XED_REG_ESP, 16);
+}
+
+xed_iform_enum_t Instruction::getIform() const {
+    return xed_decoded_inst_get_iform_enum(&xedd);
 }

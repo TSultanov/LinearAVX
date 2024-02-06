@@ -56,7 +56,6 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     pthread_t self;
     self = pthread_self();
     pthread_threadid_np(self, &tid);
-
     printf("Invalid instruction at %p in thread %p [%llu]\n", info->si_addr, self, tid);
     printf("RIP: %llx\n", uc->uc_mcontext->__ss.__rip);
     printf("RSP: %llx\n", uc->uc_mcontext->__ss.__rsp);
@@ -162,67 +161,7 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm15, sizeof(uc->uc_mcontext->__fs.__fpu_xmm15));
     printf("XMM15: %llx %llx\n", buff[0], buff[1]);
 
-    uint8_t initial_instr[XED_MAX_INSTRUCTION_BYTES];// = { 0xe8, 0x8d, 0x0c, 0x48, 0x00 };
-    memcpy(initial_instr, (unsigned char*)info->si_addr, 15);
-
-    xed_decoded_inst_t xedd;
-    uint32_t initial_olen;
-    decode_instruction2(initial_instr, &xedd, &initial_olen);
-
-    printf("Initial instruction:\n");
-    printf("olen = %d\n", initial_olen);
-    for(uint32_t i = 0; i < initial_olen; i++) {
-        printf(" %02x", (unsigned int)(*((unsigned char*)info->si_addr + i)));
-    }
-    printf("\n");
-
-    uint8_t buffer[XED_MAX_INSTRUCTION_BYTES];
-    unsigned int olen;
-
-    encode_instruction(&xedd, buffer, initial_olen, &olen, tid, uc->uc_mcontext->__ss.__rbp, uc->uc_mcontext->__ss.__rip, uc->uc_mcontext->__ss.__rsp);
-
-    printf("Translated instruction:\n");
-    printf("olen = %d\n", olen);
-    for(uint32_t i = 0; i < olen; i++) {
-        printf(" %02x", (unsigned int)buffer[i]);
-    }
-    printf("\n");
-    xed_decoded_inst_t xedd2;
-    uint32_t initial_olen2;
-    decode_instruction2(buffer, &xedd2, &initial_olen2);
-
-    if (olen > initial_olen) {
-        printf("Translated instruction is longer than original one (%d > %d), cannot continue\n", olen, initial_olen);
-        exit(1);
-    }
-
-    printf("Enable write flag on memory\n");
-
-    int pid;
-    mach_port_t task;
-    // kern_return_t kret = task_for_pid(mach_task_self(), pid, &task);
-    // if (kret != KERN_SUCCESS) {
-    //     printf("task_for_pid failed: %d\n", kret);
-    //     exit(1);
-    // }
-    kern_return_t kret = vm_protect(current_task(), (vm_address_t)info->si_addr, initial_olen, FALSE, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE | VM_PROT_ALL);
-    if (kret != KERN_SUCCESS) {
-        printf("vm_protect failed: %d\n", kret);
-        exit(1);
-    }
-    printf("Copying instruction...\n");
-    
-    printf("Aligining with NOPs... for %d bytes\n", initial_olen - olen);
-    if (olen < initial_olen) {
-        memset(info->si_addr/* + (initial_olen - olen)*/, 0x90, initial_olen - olen);
-    }
-    memcpy(info->si_addr + (initial_olen - olen), buffer, olen);
-    printf("Copy OK\n");
-    // kret = vm_protect(task, (vm_address_t)info->si_addr, initial_olen, FALSE, VM_PROT_READ | VM_PROT_EXECUTE | VM_PROT_ALL);
-    // if (kret != KERN_SUCCESS) {
-    //     printf("vm_protect failed: %d\n", kret);
-    //     exit(1);
-    // }
+    reencode_instructions(info->si_addr);
 }
 
 #define DYLD_INTERPOSE(_replacment,_replacee) \
@@ -270,6 +209,9 @@ void sigtrap_handler(int sig, siginfo_t *info, void *ucontext) {
 
     // Set RIP to point to chunk start
     ((ucontext_t*)ucontext)->uc_mcontext->__ss.__rip = (uint64_t)chunk;
+
+    // printf("PID %d, waiting for user input to return...\n", getpid());
+    // getchar();
 }
 
 void init_sigtrap_handler(void) {

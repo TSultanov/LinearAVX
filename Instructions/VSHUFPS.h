@@ -2,7 +2,7 @@
 
 class VSHUFPS : public CompilableInstruction<VSHUFPS> {
 public:
-    VSHUFPS(uint64_t rip, uint8_t ilen, const xed_decoded_inst_t *xedd) : CompilableInstruction(rip, ilen, xedd) {}
+    VSHUFPS(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd) : CompilableInstruction(rip, ilen, xedd) {}
 private:
     void implementation(bool upper, bool compile_inline, ymm_t *ymm) {
         if (operands[0].reg() == operands[1].reg()) {

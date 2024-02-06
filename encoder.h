@@ -6,9 +6,7 @@
 extern "C" {
 #endif
 #include <xed/xed-interface.h>
-void encode_instruction(xed_decoded_inst_t *xedd, uint8_t *buffer,
-                        const unsigned int ilen, unsigned int *olen,
-                        uint64_t tid, uint64_t rbp_value, uint64_t rip_value, uint64_t rsp_value);
+void reencode_instructions(uint8_t* instructionPointer);
 #ifdef __cplusplus
 }
 #endif
