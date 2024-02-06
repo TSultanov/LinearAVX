@@ -21,7 +21,7 @@ public:
 
     void addInstruction(std::shared_ptr<Instruction> const& instr);
 
-    std::vector<instruction> compile(ymm_t * ymm, CompilationStrategy compilationStrategy, uint64_t returnAddress);
+    std::vector<instruction> compile(CompilationStrategy compilationStrategy, uint64_t returnAddress);
 
-    uint8_t* encode(ymm_t * ymm, CompilationStrategy compilationStrategy, uint32_t *length, uint64_t returnAddress);
+    uint8_t* encode(CompilationStrategy compilationStrategy, uint32_t *length, uint64_t returnAddress);
 };

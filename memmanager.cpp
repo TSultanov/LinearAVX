@@ -12,14 +12,10 @@ extern "C" {
     #include "xed/xed-encode.h"
 }
 
-static std::unordered_map<uint64_t, ymm_t*> ymm_register_file;
+thread_local __m128 ymmStorage[32];
 
-ymm_t* get_ymm_for_thread(uint64_t tid) {
-    if (!ymm_register_file.contains(tid)) {
-        ymm_register_file[tid] = new ymm_t {0};
-    }
-
-    return ymm_register_file[tid];
+__m128 *get_ymm_storage() {
+    return ymmStorage;
 }
 
 uint8_t* alloc_executable(uint64_t size) {

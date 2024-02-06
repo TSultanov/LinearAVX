@@ -8,7 +8,7 @@ class VBROADCASTSS : public CompilableInstruction<VBROADCASTSS> {
 public:
     VBROADCASTSS(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd) : CompilableInstruction(rip, ilen, xedd) {}
 private:
-    void implementation(bool upper, bool compile_inline, ymm_t *ymm) override {
+    void implementation(bool upper, bool compile_inline) override {
         for (int i = 0; i < 4; i++) {
             insertps(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(false), xed_imm0(i*16, 8));
         }

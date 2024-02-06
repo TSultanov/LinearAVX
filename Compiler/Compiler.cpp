@@ -41,7 +41,7 @@ void Compiler::addInstruction(std::shared_ptr<Instruction> const& instr) {
     instructions.push_back(instr);
 }
 
-std::vector<Compiler::instruction> Compiler::compile(ymm_t * ymm, CompilationStrategy compilationStrategy, uint64_t returnAddress) {
+std::vector<Compiler::instruction> Compiler::compile(CompilationStrategy compilationStrategy, uint64_t returnAddress) {
     std::vector<instruction> encodedInstructions;
 
     const xed_state_t dstate = {.mmode = XED_MACHINE_MODE_LONG_64,
@@ -57,7 +57,7 @@ std::vector<Compiler::instruction> Compiler::compile(ymm_t * ymm, CompilationStr
     }
 
     for (auto& instr : instructions) {
-        auto requests = instr->compile(ymm, compilationStrategy);
+        auto requests = instr->compile(compilationStrategy);
 
         printf("Compiling %s...\n", xed_iform_enum_t2str(instr->getIform()));
 
@@ -121,8 +121,8 @@ std::vector<Compiler::instruction> Compiler::compile(ymm_t * ymm, CompilationStr
     return encodedInstructions;
 }
 
-uint8_t* Compiler::encode(ymm_t * ymm, CompilationStrategy compilationStrategy, uint32_t *length, uint64_t returnAddress) {
-    auto const& encodedInstructions = compile(ymm, compilationStrategy, returnAddress);
+uint8_t* Compiler::encode(CompilationStrategy compilationStrategy, uint32_t *length, uint64_t returnAddress) {
+    auto const& encodedInstructions = compile(compilationStrategy, returnAddress);
 
     uint32_t total_olen = 0;
     for (auto const &instr : encodedInstructions) {

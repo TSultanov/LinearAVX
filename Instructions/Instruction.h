@@ -62,13 +62,16 @@ protected:
     void movups(xed_reg_enum_t reg, xed_encoder_operand_t mem);
     void movups(xed_encoder_operand_t mem, xed_reg_enum_t reg);
     void movups(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void movups_raw(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movaps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movdqu(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void movdqu_raw(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movdqa(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void xorps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void xorps_raw(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void xorpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void insertps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
     void addps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
@@ -78,14 +81,17 @@ protected:
     void unpckhps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void pcmpeqq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void blendvpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void call(xed_encoder_operand_t op);
 
     void op3(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
     void op2(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void op2_raw(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void op1(xed_iclass_enum_t instr, xed_encoder_operand_t op0);
 
-    void swap_in_upper_ymm(ymm_t *ymm, bool force = false);
-    void swap_out_upper_ymm(ymm_t *ymm, bool force = false);
-    void with_upper_ymm(ymm_t *ymm, std::function<void()> instr);
-    void zeroupperInternal(ymm_t * ymm, Operand const& op);
+    void swap_in_upper_ymm(bool force = false);
+    void swap_out_upper_ymm(bool force = false);
+    void with_upper_ymm(std::function<void()> instr);
+    void zeroupperInternal(Operand const& op);
 
     bool usesRipAddressing() const;
     bool usesRspAddressing() const;
@@ -94,11 +100,12 @@ protected:
     void returnReg(xed_reg_enum_t reg);
 
     void withFreeReg(std::function<void(xed_reg_enum_t)> instr);
+    void withReg(xed_reg_enum_t reg, std::function<void()> instr);
     void withRipSubstitution(std::function<void(std::function<xed_encoder_operand_t(xed_encoder_operand_t)>)> instr);
 
     void withPreserveXmmReg(Operand const& op, std::function<void()> instr);
     void withPreserveXmmReg(xed_reg_enum_t reg, std::function<void()> instr);
     public:
-    virtual std::vector<xed_encoder_request_t> const& compile(ymm_t *ymm, CompilationStrategy compilationStrategy, uint64_t returnAddr = 0) = 0;
+    virtual std::vector<xed_encoder_request_t> const& compile(CompilationStrategy compilationStrategy, uint64_t returnAddr = 0) = 0;
     xed_iform_enum_t getIform() const;
 };

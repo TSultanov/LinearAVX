@@ -9,12 +9,7 @@ extern "C" {
 
 
 #include <emmintrin.h>
-typedef struct {
-    __m128 u[16];
-    __m128 l[16];
-} ymm_t;
-
-ymm_t* get_ymm_for_thread(uint64_t tid);
+__m128 *get_ymm_storage();
 uint8_t* alloc_executable(uint64_t size);
 void jumptable_add_chunk(uint64_t location, void* chunk);
 void* jumptable_get_chunk(uint64_t location);

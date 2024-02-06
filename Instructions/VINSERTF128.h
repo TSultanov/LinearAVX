@@ -4,7 +4,7 @@ class VINSERTF128 : public CompilableInstruction<VINSERTF128> {
 public:
     VINSERTF128(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd) : CompilableInstruction(rip, ilen, xedd) {}
 private:
-    void implementation(bool upper, bool compile_inline, ymm_t *ymm) {
+    void implementation(bool upper, bool compile_inline) {
         auto value = operands[3].immValue();
         if(value) {
             if (upper) {

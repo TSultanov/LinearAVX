@@ -92,7 +92,7 @@ void reencode_instructions(uint8_t* instructionPointer) {
         exit(1);
     }
 
-    //waitForDebugger();
+    // waitForDebugger();
 
     printf("Compiling...\n");
 
@@ -106,8 +106,6 @@ void reencode_instructions(uint8_t* instructionPointer) {
     pthread_t self;
     self = pthread_self();
     pthread_threadid_np(self, &tid);
-    ymm_t *ymm = get_ymm_for_thread(tid); // TODO redo to use thread local storage
-
 
     kern_return_t kret = vm_protect(current_task(), (vm_address_t)instructionPointer, decodedInstructionLength, FALSE, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE | VM_PROT_ALL);
     if (kret != KERN_SUCCESS) {
@@ -124,7 +122,7 @@ void reencode_instructions(uint8_t* instructionPointer) {
     if (decodedInstructionLength > trampolineSize) {
     // if (false) {
         uint32_t encodedLength = 0;
-        uint8_t* chunk = compiler.encode(ymm, CompilationStrategy::FarJump, &encodedLength, (uint64_t)instructionPointer + decodedInstructionLength - 1);
+        uint8_t* chunk = compiler.encode(CompilationStrategy::FarJump, &encodedLength, (uint64_t)instructionPointer + decodedInstructionLength - 1);
 
         printf("Chunk at %llx, length %d\n", (uint64_t)chunk, encodedLength);
 
@@ -159,7 +157,7 @@ void reencode_instructions(uint8_t* instructionPointer) {
         i++;
     } else {
         uint32_t encodedLength = 0;
-        uint8_t* chunk = compiler.encode(ymm, CompilationStrategy::DirectCall, &encodedLength, -1);
+        uint8_t* chunk = compiler.encode(CompilationStrategy::DirectCall, &encodedLength, -1);
 
         // otherwise emit INT3 at the end of the block from where we taken the instructions
         // fill nops

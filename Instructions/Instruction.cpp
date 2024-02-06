@@ -4,6 +4,7 @@
 #include "xed/xed-encoder-hl.h"
 #include "xed/xed-iclass-enum.h"
 #include "xed/xed-iform-enum.h"
+#include "xed/xed-operand-enum.h"
 #include "xed/xed-reg-enum.h"
 #include <cstdio>
 #include <unistd.h>
@@ -105,6 +106,18 @@ void Instruction::mov(xed_reg_enum_t reg, uint64_t immediate) {
     internal_requests.push_back(req);
 }
 
+void Instruction::op1(xed_iclass_enum_t instr, xed_encoder_operand_t op0) {
+    withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
+        xed_encoder_request_t req;
+        xed_encoder_instruction_t enc_inst;
+
+        xed_inst1(&enc_inst, dstate, instr, opWidth, subst(op0));
+        xed_convert_to_encoder_request(&req, &enc_inst);
+        xed3_operand_set_vl(&req, vl);
+
+        internal_requests.push_back(req);
+    });
+}
 
 void Instruction::op2(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     withRipSubstitution([=] (std::function<xed_encoder_operand_t(xed_encoder_operand_t)> subst) {
@@ -117,6 +130,17 @@ void Instruction::op2(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_en
 
         internal_requests.push_back(req);
     });
+}
+
+void Instruction::op2_raw(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    xed_encoder_request_t req;
+    xed_encoder_instruction_t enc_inst;
+
+    xed_inst2(&enc_inst, dstate, instr, opWidth, op0, op1);
+    xed_convert_to_encoder_request(&req, &enc_inst);
+    xed3_operand_set_vl(&req, vl);
+
+    internal_requests.push_back(req);
 }
 
 void Instruction::op3(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
@@ -144,6 +168,10 @@ void Instruction::movups(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_MOVUPS, op0, op1);
 }
 
+void Instruction::movups_raw(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2_raw(XED_ICLASS_MOVUPS, op0, op1);
+}
+
 void Instruction::movaps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_MOVAPS, op0, op1);
 }
@@ -158,6 +186,10 @@ void Instruction::movsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
 
 void Instruction::xorps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_XORPS, op0, op1);
+}
+
+void Instruction::xorps_raw(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2_raw(XED_ICLASS_XORPS, op0, op1);
 }
 
 void Instruction::xorpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
@@ -184,6 +216,10 @@ void Instruction::movdqu(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_MOVDQU, op0, op1);
 }
 
+void Instruction::movdqu_raw(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2_raw(XED_ICLASS_MOVDQU, op0, op1);
+}
+
 void Instruction::movdqa(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_MOVDQA, op0, op1);
 }
@@ -208,59 +244,89 @@ void Instruction::blendvpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1)
     op2(XED_ICLASS_BLENDVPD, op0, op1);
 }
 
-void Instruction::swap_in_upper_ymm(ymm_t *ymm, bool force) {
-    withFreeReg([=] (xed_reg_enum_t tempReg) {
-        std::unordered_set<xed_reg_enum_t> usedRegs;
+void Instruction::call(xed_encoder_operand_t op) {
+    xed_encoder_request_t req;
+    // xed_encoder_instruction_t enc_inst;
 
-        for (auto& op : operands) {
-            if (op.isYmm() || (op.isXmm() && force)) {
-                auto reg = op.toXmmReg();
-                if (usedRegs.contains(reg)) {
-                    continue;
+    // xed_inst1(&enc_inst, dstate, XED_ICLASS_CALL_NEAR, 0, op);
+    // xed_convert_to_encoder_request(&req, &enc_inst);
+    // xed3_operand_set_vl(&req, vl);
+
+    xed_encoder_request_zero_set_mode(&req, &dstate);
+    xed_encoder_request_set_iclass(&req, XED_ICLASS_CALL_NEAR);
+    xed_encoder_request_set_operand_order(&req, 0, XED_OPERAND_REG0);
+    xed_encoder_request_set_reg(&req, XED_OPERAND_REG0, op.u.reg);
+    xed_encoder_request_set_effective_address_size(&req, 64);
+    xed_encoder_request_set_effective_operand_width(&req, 64);
+
+
+    internal_requests.push_back(req);
+}
+
+void Instruction::swap_in_upper_ymm(bool force) {
+    void* getYmmAddr = (void*)&get_ymm_storage;
+    withReg(XED_REG_RBX, [=]() {
+        mov(XED_REG_RBX, (uint64_t)getYmmAddr);
+        withReg(XED_REG_RAX, [=]() {
+            call(xed_reg(XED_REG_RBX));
+            // RAX now will contain the ymm pointer
+
+            std::unordered_set<xed_reg_enum_t> usedRegs;
+
+            for (auto& op : operands) {
+                if (op.isYmm() || (op.isXmm() && force)) {
+                    auto reg = op.toXmmReg();
+                    if (usedRegs.contains(reg)) {
+                        continue;
+                    }
+                    usedRegs.insert(reg);
+                    uint32_t regnum = reg - XED_REG_XMM0;
+
+                    auto disp = xed_disp(regnum*sizeof(__m128), 32);
+                    movups_raw(xed_mem_bd(XED_REG_RAX, disp, 128), xed_reg(reg));
+
+                    disp = xed_disp((regnum + 16)*sizeof(__m128), 32);
+                    movups_raw(xed_reg(reg), xed_mem_bd(XED_REG_RAX, disp, 128));
                 }
-                usedRegs.insert(reg);
-                uint32_t regnum = reg - XED_REG_XMM0;
-
-                mov(tempReg, (uint64_t)(&(ymm->l[regnum])));
-                movups(xed_mem_b(tempReg, 128), reg);
-
-                mov(tempReg, (uint64_t)(&(ymm->u[regnum])));
-                movups(reg, xed_mem_b(tempReg, 128));
             }
-        }
+        });
     });
 }
 
-void Instruction::swap_out_upper_ymm(ymm_t *ymm, bool force) {
-    withFreeReg([=] (xed_reg_enum_t tempReg) {
-        std::unordered_set<xed_reg_enum_t> usedRegs;
+void Instruction::swap_out_upper_ymm(bool force) {
+    void* getYmmAddr = (void*)&get_ymm_storage;
+    withReg(XED_REG_RBX, [=]() {
+        mov(XED_REG_RBX, (uint64_t)getYmmAddr);
+        withReg(XED_REG_RAX, [=]() {
+            call(xed_reg(XED_REG_RBX));
+            // RAX now will contain the ymm pointer
 
-        for (auto& op : operands) {
-            if (op.isYmm() || (op.isXmm() && force)) {
-                auto reg = op.toXmmReg();
-                if (usedRegs.contains(reg)) {
-                    continue;
+            std::unordered_set<xed_reg_enum_t> usedRegs;
+
+            for (auto& op : operands) {
+                if (op.isYmm() || (op.isXmm() && force)) {
+                    auto reg = op.toXmmReg();
+                    if (usedRegs.contains(reg)) {
+                        continue;
+                    }
+                    usedRegs.insert(reg);
+                    uint32_t regnum = reg - XED_REG_XMM0;
+
+                    auto disp = xed_disp((regnum+16)*sizeof(__m128), 32);
+                    movups_raw(xed_mem_bd(XED_REG_RAX, disp, 128), xed_reg(reg));
+
+                    disp = xed_disp(regnum*sizeof(__m128), 32);
+                    movups_raw(xed_reg(reg), xed_mem_bd(XED_REG_RAX, disp, 128));
                 }
-                usedRegs.insert(reg);
-                uint32_t regnum = reg - XED_REG_XMM0;
-
-                mov(tempReg, (uint64_t)(&(ymm->u[regnum])));
-                movups(xed_mem_b(tempReg, 128), reg);
-
-                mov(tempReg, (uint64_t)(&(ymm->l[regnum])));
-                movups(reg, xed_mem_b(tempReg, 128));
             }
-        }
+        });
     });
 }
 
-void Instruction::with_upper_ymm(ymm_t *ymm, std::function<void()> instr) {
-    // This is also a wrong approach as the applicaiton might be multithreaded
-    // and each threads needs to have its own copy of the upper ymm, which
-    // we need somehow find dynamically and not hardcode addresses.
-    swap_in_upper_ymm(ymm);
+void Instruction::with_upper_ymm(std::function<void()> instr) {
+    swap_in_upper_ymm();
     instr();
-    swap_out_upper_ymm(ymm);
+    swap_out_upper_ymm();
 }
 
 bool Instruction::usesYmm() const {
@@ -272,24 +338,33 @@ bool Instruction::usesYmm() const {
     return false;
 }
 
-void Instruction::zeroupperInternal(ymm_t * ymm, Operand const& op) {
-    withFreeReg([=] (xed_reg_enum_t tempReg) {
-        auto reg = op.toXmmReg();
-        uint32_t regnum = reg - XED_REG_XMM0;
+void Instruction::zeroupperInternal(Operand const& op) {
+    void* getYmmAddr = (void*)&get_ymm_storage;
+    withReg(XED_REG_RBX, [=]() {
+        mov(XED_REG_RBX, (uint64_t)getYmmAddr);
+        withReg(XED_REG_RAX, [=]() {
+            call(xed_reg(XED_REG_RBX));
+            // RAX now will contain the ymm pointer
 
-        mov(tempReg, (uint64_t)(&(ymm->l[regnum])));
-        movups(xed_mem_b(tempReg, 128), reg);
+            auto reg = op.toXmmReg();
+            uint32_t regnum = reg - XED_REG_XMM0;
 
-        mov(tempReg, (uint64_t)(&(ymm->u[regnum])));
-        movups(reg, xed_mem_b(tempReg, 128));
+            // swap in the reg
+            auto disp = xed_disp(regnum*sizeof(__m128), 32);
+            movups_raw(xed_mem_bd(XED_REG_RAX, disp, 128), xed_reg(reg));
 
-        xorps(xed_reg(reg), xed_reg(reg));
+            disp = xed_disp((regnum + 16)*sizeof(__m128), 32);
+            movups_raw(xed_reg(reg), xed_mem_bd(XED_REG_RAX, disp, 128));
 
-        mov(tempReg, (uint64_t)(&(ymm->u[regnum])));
-        movups(xed_mem_b(tempReg, 128), reg);
+            xorps_raw(xed_reg(reg), xed_reg(reg));
 
-        mov(tempReg, (uint64_t)(&(ymm->l[regnum])));
-        movups(reg, xed_mem_b(tempReg, 128));
+            // swap it out
+            disp = xed_disp((regnum + 16)*sizeof(__m128), 32);
+            movups_raw(xed_mem_bd(XED_REG_RAX, disp, 128), xed_reg(reg));
+
+            disp = xed_disp(regnum*sizeof(__m128), 32);
+            movups_raw(xed_reg(reg), xed_mem_bd(XED_REG_RAX, disp, 128));
+        });
     });
 }
 
@@ -334,6 +409,14 @@ void Instruction::withFreeReg(std::function<void(xed_reg_enum_t)> instr) {
     returnReg(reg);
 }
 
+void Instruction::withReg(xed_reg_enum_t reg, std::function<void()> instr) {
+    usedRegs.insert(reg);
+    push(reg);
+    instr();
+    pop(reg);
+    returnReg(reg);
+}
+
 void Instruction::withRipSubstitution(std::function<void(std::function<xed_encoder_operand_t(xed_encoder_operand_t subst)>)> instr) {
     // TODO: do not replace RIP if we are compiling inline
     if (usesRipAddressing()) {
@@ -370,6 +453,7 @@ void Instruction::sub(xed_reg_enum_t reg, int8_t immediate) {
 
     xed_inst2(&enc_inst, dstate, XED_ICLASS_SUB, opWidth, xed_reg(reg), xed_imm0(immediate, 8));
     xed_convert_to_encoder_request(&req, &enc_inst);
+    xed_encoder_request_set_effective_operand_width(&req, 64);
 
     internal_requests.push_back(req);
 
@@ -405,13 +489,13 @@ void Instruction::withPreserveXmmReg(Operand const& op, std::function<void()> in
 }
 
 void Instruction::withPreserveXmmReg(xed_reg_enum_t reg, std::function<void()> instr) {
-    sub(XED_REG_ESP, 16);
-    movdqu(xed_mem_b(XED_REG_RSP, 128), xed_reg(reg));
+    sub(XED_REG_RSP, 16);
+    movdqu_raw(xed_mem_b(XED_REG_RSP, 128), xed_reg(reg));
 
     instr();
 
-    movdqu(xed_reg(reg), xed_mem_b(XED_REG_RSP, 128));
-    add(XED_REG_ESP, 16);
+    movdqu_raw(xed_reg(reg), xed_mem_b(XED_REG_RSP, 128));
+    add(XED_REG_RSP, 16);
 }
 
 xed_iform_enum_t Instruction::getIform() const {

@@ -8,7 +8,7 @@ class VMOVSS : public CompilableInstruction<VMOVSS> {
 public:
     VMOVSS(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd) : CompilableInstruction(rip, ilen, xedd) {}
 private:
-    void implementation(bool upper, bool compile_inline, ymm_t* ymm) override {
+    void implementation(bool upper, bool compile_inline) override {
         assert(operands.size() == 2 || operands.size() == 3);
         if (operands.size() == 2) {
             movss(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
@@ -19,7 +19,7 @@ private:
         }
 
         if (operands[0].isYmm() || operands[0].isXmm()) {
-            zeroupperInternal(ymm, operands[0]);
+            zeroupperInternal(operands[0]);
         }
     }
 };
