@@ -160,6 +160,10 @@ void Instruction::xorps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_XORPS, op0, op1);
 }
 
+void Instruction::xorpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_XORPD, op0, op1);
+}
+
 void Instruction::insertps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
     op3(XED_ICLASS_INSERTPS, op0, op1, op2);
 }
@@ -186,6 +190,18 @@ void Instruction::movdqa(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
 
 void Instruction::shufps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
     op3(XED_ICLASS_SHUFPS, op0, op1, op2);
+}
+
+void Instruction::pxor(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PXOR, op0, op1);
+}
+
+void Instruction::unpckhps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_UNPCKHPS, op0, op1);
+}
+
+void Instruction::pcmpeqq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PCMPEQQ, op0, op1);
 }
 
 void Instruction::swap_in_upper_ymm(ymm_t *ymm, bool force) {

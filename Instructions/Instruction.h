@@ -69,10 +69,14 @@ protected:
     void movdqu(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movdqa(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void xorps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void xorpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void insertps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
     void addps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvtss2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void shufps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
+    void pxor(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void unpckhps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void pcmpeqq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
 
     void op3(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
     void op2(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1);
