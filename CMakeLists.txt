@@ -4,6 +4,9 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_OSX_ARCHITECTURES "x86_64")
 
+# Add -O3 to the compiler flags
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+
 add_library(avxhandler SHARED
     handler.c
     handler.h

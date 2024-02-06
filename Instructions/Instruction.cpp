@@ -468,6 +468,7 @@ void Instruction::add(xed_reg_enum_t reg, int8_t immediate) {
 
     xed_inst2(&enc_inst, dstate, XED_ICLASS_ADD, opWidth, xed_reg(reg), xed_imm0(immediate, 8));
     xed_convert_to_encoder_request(&req, &enc_inst);
+    xed_encoder_request_set_effective_operand_width(&req, 64);
 
     internal_requests.push_back(req);
 
