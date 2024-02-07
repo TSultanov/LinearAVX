@@ -3,23 +3,42 @@
 #include "Instruction.h"
 #include "VMOVSS.h"
 #include "VMOVUPS.h"
+#include "VMOVUPD.h"
 #include "VMOVAPS.h"
+#include "VMOVAPD.h"
 #include "VXORPS.h"
 #include "VINSERTPS.h"
 #include "VINSERTF128.h"
 #include "VADDPS.h"
+#include "VADDPD.h"
+#include "VDIVSD.h"
+#include "VMULSD.h"
 #include "VCVTSS2SD.h"
+#include "VCVTSI2SD.h"
+#include "VCVTSD2SS.h"
+#include "VCVTTSS2SI.h"
+#include "VCVTTSD2SI.h"
 #include "VMOVSD.h"
 #include "VMOVQ.h"
 #include "VEXTRACTF128.h"
 #include "VSHUFPS.h"
+#include "VSHUFPD.h"
 #include "VBROADCASTSS.h"
 #include "VMOVDQA.h"
+#include "VMOVDQU.h"
 #include "VPXOR.h"
 #include "VUNPCKHPS.h"
+#include "VUNPCKLPS.h"
 #include "VXORPD.h"
 #include "VPCMPEQQ.h"
 #include "VBLENDVPD.h"
+#include "VPERM2F128.h"
+#include "VANDPD.h"
+#include "VANDPS.h"
+#include "VMULPD.h"
+#include "VMULPS.h"
+#include "VSUBPD.h"
+#include "VSUBPS.h"
 #include <map>
 
 #ifdef __cplusplus
@@ -42,22 +61,41 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VMOVSS),
     ICLASSMAP(VXORPS),
     ICLASSMAP(VMOVUPS),
+    ICLASSMAP(VMOVUPD),
     ICLASSMAP(VMOVAPS),
+    ICLASSMAP(VMOVAPD),
     ICLASSMAP(VINSERTPS),
     ICLASSMAP(VINSERTF128),
     ICLASSMAP(VADDPS),
+    ICLASSMAP(VADDPD),
+    ICLASSMAP(VDIVSD),
+    ICLASSMAP(VMULSD),
     ICLASSMAP(VCVTSS2SD),
+    ICLASSMAP(VCVTSI2SD),
+    ICLASSMAP(VCVTSD2SS),
+    ICLASSMAP(VCVTTSS2SI),
+    ICLASSMAP(VCVTTSD2SI),
     ICLASSMAP(VMOVSD),
     ICLASSMAP(VMOVQ),
     ICLASSMAP(VEXTRACTF128),
     ICLASSMAP(VSHUFPS),
+    ICLASSMAP(VSHUFPD),
     ICLASSMAP(VBROADCASTSS),
     ICLASSMAP(VMOVDQA),
+    ICLASSMAP(VMOVDQU),
     ICLASSMAP(VPXOR),
     ICLASSMAP(VUNPCKHPS),
+    ICLASSMAP(VUNPCKLPS),
     ICLASSMAP(VXORPD),
     ICLASSMAP(VPCMPEQQ),
-    ICLASSMAP(VBLENDVPD)
+    ICLASSMAP(VBLENDVPD),
+    ICLASSMAP(VPERM2F128),
+    ICLASSMAP(VANDPD),
+    ICLASSMAP(VANDPS),
+    ICLASSMAP(VMULPD),
+    ICLASSMAP(VMULPS),
+    ICLASSMAP(VSUBPD),
+    ICLASSMAP(VSUBPD)
 };
 
 inline void printSupportedInstructions() {

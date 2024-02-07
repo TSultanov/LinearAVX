@@ -32,6 +32,12 @@ class Instruction {
         XED_REG_R10, XED_REG_R11, XED_REG_R12, XED_REG_R13, XED_REG_R14, XED_REG_R15
     };
 
+    const std::vector<xed_reg_enum_t> xmmRegs = {
+        XED_REG_XMM0, XED_REG_XMM1, XED_REG_XMM2, XED_REG_XMM3, XED_REG_XMM4, XED_REG_XMM5, XED_REG_XMM6, XED_REG_XMM7,
+        XED_REG_XMM8, XED_REG_XMM9, XED_REG_XMM10, XED_REG_XMM11, XED_REG_XMM12, XED_REG_XMM13, XED_REG_XMM14,
+        XED_REG_XMM15
+    };
+
     const uint64_t pointerWidthBytes = 8;
 
     const uint32_t opWidth;
@@ -63,8 +69,10 @@ protected:
     void movups(xed_reg_enum_t reg, xed_encoder_operand_t mem);
     void movups(xed_encoder_operand_t mem, xed_reg_enum_t reg);
     void movups(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void movupd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movups_raw(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movaps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void movapd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
@@ -76,12 +84,27 @@ protected:
     void xorpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void insertps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
     void addps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void addpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void subps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void subpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void divsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void mulsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void mulpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void mulps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvtss2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void cvtsi2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void cvtsd2ss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void shufps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
+    void shufpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
     void pxor(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void unpckhps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void unpcklps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void pcmpeqq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void blendvpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void cvttss2si(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void cvttsd2si(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void andpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void andps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void call(xed_encoder_operand_t op);
 
     void op3(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
@@ -89,6 +112,8 @@ protected:
     void op2_raw(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void op1(xed_iclass_enum_t instr, xed_encoder_operand_t op0);
 
+    void swap_in_upper_ymm(std::unordered_set<xed_reg_enum_t> registers);
+    void swap_out_upper_ymm(std::unordered_set<xed_reg_enum_t> registers);
     void swap_in_upper_ymm(bool force = false);
     void swap_out_upper_ymm(bool force = false);
     void with_upper_ymm(std::function<void()> instr);
@@ -98,6 +123,7 @@ protected:
     bool usesRspAddressing() const;
 
     xed_reg_enum_t getUnusedReg();
+    xed_reg_enum_t getUnusedXmmReg();
     void returnReg(xed_reg_enum_t reg);
 
     void withFreeReg(std::function<void(xed_reg_enum_t)> instr);

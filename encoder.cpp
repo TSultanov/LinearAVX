@@ -49,7 +49,7 @@ void decode_instruction_internal(uint8_t *inst, xed_decoded_inst_t *xedd, uint8_
     print_instr(xedd);
 }
 
-void reencode_instructions(uint8_t* instructionPointer) {
+int reencode_instructions(uint8_t* instructionPointer) {
     pthread_mutex_lock(&csMutex);
     // decoode as many instructions as we can
     std::vector<std::shared_ptr<Instruction>> decodedInstructions;
@@ -74,11 +74,17 @@ void reencode_instructions(uint8_t* instructionPointer) {
         printf("iclass = %s\n", xed_iclass_enum_t2str(iclass));
 
         if (!iclassMapping.contains(iclass)) {
+            if (iclass == XED_ICLASS_NOP) {
+                printf("Why the hell we are trapping at NOP?\n");
+                // getchar();
+                return olen;
+            }
+
             // We found an unsupported instruction, stop decoding and try to compile
             printf("Unsupported instruction %s (%d) found, stopping decoding\n", xed_iclass_enum_t2str(iclass), iclass);
             decodedInstructionLength -= olen;
-            printf("Supported instructions:\n");
-            printSupportedInstructions();
+            // printf("Supported instructions:\n");
+            // printSupportedInstructions();
             break;
         }
 
@@ -176,4 +182,6 @@ void reencode_instructions(uint8_t* instructionPointer) {
         jumptable_add_chunk((uint64_t)instructionPointer + (decodedInstructionLength - 1), chunk);
     }
     pthread_mutex_unlock(&csMutex);
+
+    return 0;
 }

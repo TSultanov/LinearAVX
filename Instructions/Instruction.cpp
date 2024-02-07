@@ -168,12 +168,20 @@ void Instruction::movups(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_MOVUPS, op0, op1);
 }
 
+void Instruction::movupd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_MOVUPD, op0, op1);
+}
+
 void Instruction::movups_raw(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2_raw(XED_ICLASS_MOVUPS, op0, op1);
 }
 
 void Instruction::movaps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_MOVAPS, op0, op1);
+}
+
+void Instruction::movapd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_MOVAPD, op0, op1);
 }
 
 void Instruction::movss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
@@ -204,7 +212,43 @@ void Instruction::addps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_ADDPS, op0, op1);
 }
 
+void Instruction::addpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_ADDPD, op0, op1);
+}
+
+void Instruction::subps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_SUBPS, op0, op1);
+}
+
+void Instruction::subpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_SUBPD, op0, op1);
+}
+
+void Instruction::divsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_DIVSD, op0, op1);
+}
+
+void Instruction::mulsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_MULSD, op0, op1);
+}
+
+void Instruction::mulpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_MULPD, op0, op1);
+}
+
+void Instruction::mulps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_MULPD, op0, op1);
+}
+
 void Instruction::cvtss2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_CVTSS2SD, op0, op1);
+}
+
+void Instruction::cvtsi2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_CVTSI2SD, op0, op1);
+}
+
+void Instruction::cvtsd2ss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_CVTSS2SD, op0, op1);
 }
 
@@ -228,11 +272,19 @@ void Instruction::shufps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, x
     op3(XED_ICLASS_SHUFPS, op0, op1, op2);
 }
 
+void Instruction::shufpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_SHUFPD, op0, op1, op2);
+}
+
 void Instruction::pxor(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_PXOR, op0, op1);
 }
 
 void Instruction::unpckhps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_UNPCKHPS, op0, op1);
+}
+
+void Instruction::unpcklps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_UNPCKHPS, op0, op1);
 }
 
@@ -242,6 +294,22 @@ void Instruction::pcmpeqq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) 
 
 void Instruction::blendvpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_BLENDVPD, op0, op1);
+}
+
+void Instruction::cvttss2si(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_CVTTSS2SI, op0, op1);
+}
+
+void Instruction::cvttsd2si(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_CVTTSD2SI, op0, op1);
+}
+
+void Instruction::andpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_ANDPD, op0, op1);
+}
+
+void Instruction::andps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_ANDPS, op0, op1);
 }
 
 void Instruction::call(xed_encoder_operand_t op) {
@@ -261,6 +329,60 @@ void Instruction::call(xed_encoder_operand_t op) {
 
 
     internal_requests.push_back(req);
+}
+
+void Instruction::swap_in_upper_ymm(std::unordered_set<xed_reg_enum_t> registers) {
+    void* getYmmAddr = (void*)&get_ymm_storage;
+    withReg(XED_REG_RBX, [=]() {
+        mov(XED_REG_RBX, (uint64_t)getYmmAddr);
+        withReg(XED_REG_RAX, [=]() {
+            call(xed_reg(XED_REG_RBX));
+            // RAX now will contain the ymm pointer
+
+            std::unordered_set<xed_reg_enum_t> usedRegs;
+
+            for (auto reg : registers) {
+                if (usedRegs.contains(reg)) {
+                    continue;
+                }
+                usedRegs.insert(reg);
+                uint32_t regnum = reg - XED_REG_XMM0;
+
+                auto disp = xed_disp(regnum*sizeof(__m128), 32);
+                movups_raw(xed_mem_bd(XED_REG_RAX, disp, 128), xed_reg(reg));
+
+                disp = xed_disp((regnum + 16)*sizeof(__m128), 32);
+                movups_raw(xed_reg(reg), xed_mem_bd(XED_REG_RAX, disp, 128));
+            }
+        });
+    });
+}
+
+void Instruction::swap_out_upper_ymm(std::unordered_set<xed_reg_enum_t> registers) {
+    void* getYmmAddr = (void*)&get_ymm_storage;
+    withReg(XED_REG_RBX, [=]() {
+        mov(XED_REG_RBX, (uint64_t)getYmmAddr);
+        withReg(XED_REG_RAX, [=]() {
+            call(xed_reg(XED_REG_RBX));
+            // RAX now will contain the ymm pointer
+
+            std::unordered_set<xed_reg_enum_t> usedRegs;
+
+            for (auto reg : registers) {
+                if (usedRegs.contains(reg)) {
+                    continue;
+                }
+                usedRegs.insert(reg);
+                uint32_t regnum = reg - XED_REG_XMM0;
+
+                auto disp = xed_disp((regnum+16)*sizeof(__m128), 32);
+                movups_raw(xed_mem_bd(XED_REG_RAX, disp, 128), xed_reg(reg));
+
+                disp = xed_disp(regnum*sizeof(__m128), 32);
+                movups_raw(xed_reg(reg), xed_mem_bd(XED_REG_RAX, disp, 128));
+            }
+        });
+    });
 }
 
 void Instruction::swap_in_upper_ymm(bool force) {
@@ -388,6 +510,17 @@ bool Instruction::usesRspAddressing() const {
 
 xed_reg_enum_t Instruction::getUnusedReg() {
     for (auto reg : gprs) {
+        if (usedRegs.count(reg) == 0) {
+            usedRegs.insert(reg);
+            return reg;
+        }
+    }
+
+    return XED_REG_INVALID;
+}
+
+xed_reg_enum_t Instruction::getUnusedXmmReg() {
+    for (auto reg : xmmRegs) {
         if (usedRegs.count(reg) == 0) {
             usedRegs.insert(reg);
             return reg;

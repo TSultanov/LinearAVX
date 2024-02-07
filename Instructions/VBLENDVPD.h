@@ -1,29 +1,68 @@
 #include "CompilableInstruction.h"
+#include "Operand.h"
+#include "xed/xed-encoder-hl.h"
+#include "xed/xed-reg-enum.h"
+#include <vector>
 
 class VBLENDVPD : public CompilableInstruction<VBLENDVPD> {
 public:
     VBLENDVPD(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd) : CompilableInstruction(rip, ilen, xedd) {}
 private:
     void implementation(bool upper, bool compile_inline) {
+        bool usesXmm0 = false;
+        int xmm0operand = 0;
+
+        int i = 0;
         for (auto& op : operands) {
             if (op.reg() == XED_REG_XMM0) {
-                printf("ERROR: VBLENDPVD with XMM0 is not supported (yet)\n");
-                exit(1);
+                usesXmm0 = true;
+                xmm0operand = i;
+                i++;
             }
         }
 
-        if (operands[0].reg() != operands[1].reg()) {
-            movups(
-                operands[0].toEncoderOperand(upper),
-                operands[1].toEncoderOperand(upper));
-        }
-        withPreserveXmmReg(XED_REG_XMM0, [=]() {
-            movups(xed_reg(XED_REG_XMM0), operands[3].toEncoderOperand(upper));
-            blendvpd(
-                operands[0].toEncoderOperand(upper),
-                operands[2].toEncoderOperand(upper));
+        if (usesXmm0) {
+            auto tempXmmReg = getUnusedXmmReg();
+            withPreserveXmmReg(tempXmmReg, [=]() {
+                movups(tempXmmReg, operands[xmm0operand].toEncoderOperand(upper));
 
-        });
+                std::vector<xed_encoder_operand_t> tempOperands;
+                for (int i = 0; i < operands.size(); i++) {
+                    if (i == xmm0operand) {
+                        tempOperands.push_back(xed_reg(tempXmmReg));
+                    } else {
+                        tempOperands.push_back(operands[i].toEncoderOperand(upper));
+                    }
+                }
+
+                if (operands[0].reg() != operands[1].reg()) {
+                    movups(
+                        tempOperands[0],
+                        tempOperands[1]);
+                }
+
+                withPreserveXmmReg(XED_REG_XMM0, [=]() {
+                    movups(xed_reg(XED_REG_XMM0), operands[3].toEncoderOperand(upper));
+                    blendvpd(
+                        tempOperands[0],
+                        tempOperands[2]);
+                });
+
+                if(xmm0operand == 0) {
+                    movups(operands[0].toEncoderOperand(upper), tempOperands[0]);
+                }
+            });
+
+            returnReg(tempXmmReg);
+        } else {
+            withPreserveXmmReg(XED_REG_XMM0, [=]() {
+                movups(xed_reg(XED_REG_XMM0), operands[3].toEncoderOperand(upper));
+                blendvpd(
+                    operands[0].toEncoderOperand(upper),
+                    operands[2].toEncoderOperand(upper));
+
+            });
+        }
 
         if (operands[0].isXmm()) {
             zeroupperInternal(operands[0]);

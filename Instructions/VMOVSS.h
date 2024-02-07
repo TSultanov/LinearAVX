@@ -14,8 +14,17 @@ private:
             movss(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
         }
         else if (operands.size() == 3) {
-            movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
-            movss(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
+            if (operands[0].reg() == operands[1].reg()) {
+                movss(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
+            } else if (operands[0].reg() == operands[2].reg()) {
+                withPreserveXmmReg(operands[1], [=]() {
+                    movss(operands[1].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
+                    movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
+                });
+            } else {
+                movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
+                movss(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
+            }
         }
 
         if (operands[0].isYmm() || operands[0].isXmm()) {

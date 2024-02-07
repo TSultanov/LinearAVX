@@ -6,7 +6,7 @@
 extern "C" {
 #endif
 #include <xed/xed-interface.h>
-void reencode_instructions(uint8_t* instructionPointer);
+int reencode_instructions(uint8_t* instructionPointer);
 #ifdef __cplusplus
 }
 #endif

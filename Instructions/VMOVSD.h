@@ -9,13 +9,21 @@ public:
 private:
     void implementation(bool upper, bool compile_inline) override {
         assert(operands.size() == 2 || operands.size() == 3);
-
         if (operands.size() == 2) {
             movsd(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
         }
         else if (operands.size() == 3) {
-            movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
-            movsd(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
+            if (operands[0].reg() == operands[1].reg()) {
+                movsd(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
+            } else if (operands[0].reg() == operands[2].reg()) {
+                withPreserveXmmReg(operands[1], [=]() {
+                    movsd(operands[1].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
+                    movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
+                });
+            } else {
+                movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
+                movsd(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
+            }
         }
 
         if (operands[0].isYmm() || operands[0].isXmm()) {

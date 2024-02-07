@@ -166,7 +166,11 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm15, sizeof(uc->uc_mcontext->__fs.__fpu_xmm15));
     printf("XMM15: %llx %llx\n", buff[0], buff[1]);
 
-    reencode_instructions(info->si_addr);
+    int workaround = reencode_instructions(info->si_addr);
+    if (workaround) {
+        // set RIP one byte further
+        uc->uc_mcontext->__ss.__rip += workaround;
+    }
 }
 
 #define DYLD_INTERPOSE(_replacment,_replacee) \
