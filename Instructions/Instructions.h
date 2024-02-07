@@ -59,3 +59,9 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VPCMPEQQ),
     ICLASSMAP(VBLENDVPD)
 };
+
+inline void printSupportedInstructions() {
+    for (auto const& [iclass, factory] : iclassMapping) {
+        printf("%s (%d)\n", xed_iclass_enum_t2str(iclass), iclass);
+    }
+}

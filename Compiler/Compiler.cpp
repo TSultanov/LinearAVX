@@ -114,6 +114,10 @@ std::vector<Compiler::instruction> Compiler::compile(CompilationStrategy compila
         xed_convert_to_encoder_request(&req, &enc_inst);
         instruction instr;
         xed_error_enum_t err = xed_encode(&req, instr.buffer, 15, &instr.olen);
+        if (err != XED_ERROR_NONE) {
+            printf("Encoder error: %s\n", xed_error_enum_t2str(err));
+            exit(1);
+        }
 
         encodedInstructions.push_back(instr);
     }

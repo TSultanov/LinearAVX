@@ -49,6 +49,7 @@ protected:
     std::vector<Operand> operands;
 
     Instruction(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd);
+    virtual ~Instruction() = default;
 
     bool usesYmm() const;
 

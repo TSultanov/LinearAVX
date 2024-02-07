@@ -7,6 +7,8 @@ class CompilableInstruction : public Instruction {
 protected:
     CompilableInstruction(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd) : Instruction(rip, ilen, xedd) {}
 
+    virtual ~CompilableInstruction() = default;
+
     std::vector<xed_encoder_request_t> const& compile(CompilationStrategy compilationStrategy, uint64_t returnAddr = 0) {
         internal_requests.clear();
 

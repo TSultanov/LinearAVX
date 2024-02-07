@@ -18,6 +18,7 @@
 #include "memmanager.h"
 #include "printinstr.h"
 #include "decoder.h"
+#include "utils.h"
 
 void hello(void)
 {
@@ -56,10 +57,13 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     pthread_t self;
     self = pthread_self();
     pthread_threadid_np(self, &tid);
-    printf("Invalid instruction at %p in thread %p [%llu]\n", info->si_addr, self, tid);
+    printf("Invalid instruction at %p in thread %p [%llu] pid %d\n", info->si_addr, self, tid, getpid());
     printf("RIP: %llx\n", uc->uc_mcontext->__ss.__rip);
     printf("RSP: %llx\n", uc->uc_mcontext->__ss.__rsp);
     printf("RBP: %llx\n", uc->uc_mcontext->__ss.__rbp);
+
+    printf("FS: %llx\n", uc->uc_mcontext->__ss.__fs);
+    printf("GS: %llx\n", uc->uc_mcontext->__ss.__gs);
 
     // // print GPR
     printf("RAX: %llx\n", uc->uc_mcontext->__ss.__rax);
@@ -197,6 +201,8 @@ void sigtrap_handler(int sig, siginfo_t *info, void *ucontext) {
     void* chunk = jumptable_get_chunk(rip-1); // RIP points to instruction after the trap instruction
     if (chunk == NULL) {
         printf("sigtrap_handler: No chunk found for rip 0x%llx\n", rip);
+        printf("PID %d, attach debugger and press any key...\n", getpid());
+        getchar();
         exit(1);
     }
 

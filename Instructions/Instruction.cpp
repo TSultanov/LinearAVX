@@ -14,12 +14,12 @@ const xed_state_t dstate = {.mmode = XED_MACHINE_MODE_LONG_64,
                             .stack_addr_width = XED_ADDRESS_WIDTH_64b};
 
 Instruction::Instruction(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd)
-:xi(xed_decoded_inst_inst(&xedd))
-,opWidth(xed_decoded_inst_get_operand_width(&xedd))
+:opWidth(xed_decoded_inst_get_operand_width(&xedd))
 ,vl(xed3_operand_get_vl(&xedd))
-,xedd(xedd)
 ,rip(rip)
 ,ilen(ilen)
+,xi(xed_decoded_inst_inst(&xedd))
+,xedd(xedd)
 {
     auto n_operands = xed_inst_noperands(xi);
     for (uint32_t i = 0; i < n_operands; i++) {

@@ -26,11 +26,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
+#include <pthread.h>
 
 #include "Instructions/Instructions.h"
 
-const xed_state_t dstate = {.mmode = XED_MACHINE_MODE_LONG_64,
-                            .stack_addr_width = XED_ADDRESS_WIDTH_64b};
+static pthread_mutex_t csMutex =  PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
 
 void decode_instruction_internal(uint8_t *inst, xed_decoded_inst_t *xedd, uint8_t *olen) {
     xed_machine_mode_enum_t mmode = XED_MACHINE_MODE_LONG_64;
@@ -50,6 +50,7 @@ void decode_instruction_internal(uint8_t *inst, xed_decoded_inst_t *xedd, uint8_
 }
 
 void reencode_instructions(uint8_t* instructionPointer) {
+    pthread_mutex_lock(&csMutex);
     // decoode as many instructions as we can
     std::vector<std::shared_ptr<Instruction>> decodedInstructions;
     uint64_t decodedInstructionLength = 0;
@@ -70,16 +71,22 @@ void reencode_instructions(uint8_t* instructionPointer) {
         decodedInstructionLength += olen;
 
         xed_iclass_enum_t iclass = xed_decoded_inst_get_iclass(&xedd);
+        printf("iclass = %s\n", xed_iclass_enum_t2str(iclass));
 
         if (!iclassMapping.contains(iclass)) {
             // We found an unsupported instruction, stop decoding and try to compile
+            printf("Unsupported instruction %s (%d) found, stopping decoding\n", xed_iclass_enum_t2str(iclass), iclass);
             decodedInstructionLength -= olen;
+            printf("Supported instructions:\n");
+            printSupportedInstructions();
             break;
         }
 
         auto instrFactory = iclassMapping.at(iclass);
         auto instr = instrFactory((uint64_t)currentInstrPointer, olen, xedd);
         decodedInstructions.push_back(instr);
+
+        break;
     }
 
     if (decodedInstructions.empty()) {
@@ -168,4 +175,5 @@ void reencode_instructions(uint8_t* instructionPointer) {
         instructionPointer[decodedInstructionLength - 1] = 0xcc;
         jumptable_add_chunk((uint64_t)instructionPointer + (decodedInstructionLength - 1), chunk);
     }
+    pthread_mutex_unlock(&csMutex);
 }
