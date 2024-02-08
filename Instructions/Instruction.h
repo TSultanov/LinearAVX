@@ -105,6 +105,7 @@ protected:
     void cvttsd2si(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void andpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void andps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void psllq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void call(xed_encoder_operand_t op);
 
     void op3(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);

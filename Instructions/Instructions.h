@@ -39,6 +39,7 @@
 #include "VMULPS.h"
 #include "VSUBPD.h"
 #include "VSUBPS.h"
+#include "VPSLLQ.h"
 #include <map>
 
 #ifdef __cplusplus
@@ -95,7 +96,8 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VMULPD),
     ICLASSMAP(VMULPS),
     ICLASSMAP(VSUBPD),
-    ICLASSMAP(VSUBPD)
+    ICLASSMAP(VSUBPD),
+    ICLASSMAP(VPSLLQ),
 };
 
 inline void printSupportedInstructions() {

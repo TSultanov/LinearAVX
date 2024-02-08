@@ -312,6 +312,10 @@ void Instruction::andps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_ANDPS, op0, op1);
 }
 
+void Instruction::psllq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PSLLQ, op0, op1);
+}
+
 void Instruction::call(xed_encoder_operand_t op) {
     xed_encoder_request_t req;
     // xed_encoder_instruction_t enc_inst;
