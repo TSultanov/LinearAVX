@@ -26,7 +26,7 @@ private:
             }
         }
 
-        if (operands[0].isYmm() || operands[0].isXmm()) {
+        if (operands[0].isXmm()) {
             zeroupperInternal(operands[0]);
         }
     }

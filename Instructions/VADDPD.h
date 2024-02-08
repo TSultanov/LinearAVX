@@ -16,5 +16,9 @@ private:
             movupd(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
             addpd(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
         }
+
+        if (operands[0].isXmm()) {
+            zeroupperInternal(operands[0]);
+        }
     }
 };
