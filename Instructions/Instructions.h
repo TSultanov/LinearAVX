@@ -12,6 +12,7 @@
 #include "VADDPS.h"
 #include "VADDPD.h"
 #include "VDIVSD.h"
+#include "VDIVSS.h"
 #include "VMULSD.h"
 #include "VCVTSS2SD.h"
 #include "VCVTSI2SD.h"
@@ -40,6 +41,23 @@
 #include "VSUBPD.h"
 #include "VSUBPS.h"
 #include "VPSLLQ.h"
+#include "VCMPPD.h"
+#include "VANDNPD.h"
+#include "VANDNPS.h"
+#include "VMOVMSKPS.h"
+#include "VMOVMSKPD.h"
+#include "SHLX.h"
+#include "VMOVLHPS.h"
+#include "VPERMILPS.h"
+#include "VFMADD231PS.h"
+#include "VUCOMISS.h"
+#include "VUCOMISD.h"
+#include "VSQRTPS.h"
+#include "VSQRTPD.h"
+#include "VHADDPS.h"
+#include "VHADDPD.h"
+#include "VRSQRTPS.h"
+#include "VRSQRTSS.h"
 #include <map>
 
 #ifdef __cplusplus
@@ -70,6 +88,7 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VADDPS),
     ICLASSMAP(VADDPD),
     ICLASSMAP(VDIVSD),
+    ICLASSMAP(VDIVSS),
     ICLASSMAP(VMULSD),
     ICLASSMAP(VCVTSS2SD),
     ICLASSMAP(VCVTSI2SD),
@@ -96,8 +115,25 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VMULPD),
     ICLASSMAP(VMULPS),
     ICLASSMAP(VSUBPD),
-    ICLASSMAP(VSUBPD),
+    ICLASSMAP(VSUBPS),
     ICLASSMAP(VPSLLQ),
+    ICLASSMAP(VCMPPD),
+    ICLASSMAP(VANDNPD),
+    ICLASSMAP(VANDNPS),
+    ICLASSMAP(VMOVMSKPS),
+    ICLASSMAP(VMOVMSKPD),
+    ICLASSMAP(SHLX),
+    ICLASSMAP(VMOVLHPS),
+    ICLASSMAP(VPERMILPS),
+    ICLASSMAP(VFMADD231PS),
+    ICLASSMAP(VUCOMISS),
+    ICLASSMAP(VUCOMISD),
+    ICLASSMAP(VSQRTPS),
+    ICLASSMAP(VSQRTPD),
+    ICLASSMAP(VHADDPS),
+    ICLASSMAP(VHADDPD),
+    ICLASSMAP(VRSQRTPS),
+    ICLASSMAP(VRSQRTSS),
 };
 
 inline void printSupportedInstructions() {

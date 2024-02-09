@@ -9,6 +9,20 @@ protected:
 
     virtual ~CompilableInstruction() = default;
 
+    void map3opto2op(bool upper, std::function<void(xed_encoder_operand_t const&, xed_encoder_operand_t const&)> instr) {
+        if (operands[0].reg() == operands[1].reg()) {
+            instr(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
+        } else if (operands[0].reg() == operands[2].reg()) {
+            withPreserveXmmReg(operands[1], [=]() {
+                addpd(operands[1].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
+                instr(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
+            });
+        } else {
+            movupd(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
+            instr(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
+        }
+    }
+
     std::vector<xed_encoder_request_t> const& compile(CompilationStrategy compilationStrategy, uint64_t returnAddr = 0) {
         internal_requests.clear();
 

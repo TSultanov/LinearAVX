@@ -22,6 +22,28 @@ bool Operand::isYmm() const {
     return m_reg >= XED_REG_YMM0 && m_reg <= XED_REG_YMM16;
 }
 
+bool Operand::is32BitRegister() const {
+    return m_reg >= XED_REG_EAX && m_reg <= XED_REG_EDI;
+}
+
+bool Operand::is64BitRegister() const {
+    return m_reg >= XED_REG_RAX && m_reg <= XED_REG_R15;
+}
+
+xed_reg_enum_t Operand::to64BitRegister() const {
+    if (is32BitRegister()) {
+        return (xed_reg_enum_t)(m_reg - XED_REG_EAX + XED_REG_RAX);
+    }
+    return m_reg;
+}
+
+xed_reg_enum_t Operand::to32BitRegister() const {
+    if (is64BitRegister()) {
+        return (xed_reg_enum_t)(m_reg - XED_REG_RAX + XED_REG_EAX);
+    }
+    return m_reg;
+}
+
 xed_reg_enum_t Operand::toXmmReg() const {
     assert(isYmm() || isXmm());
     if (isYmm()) {

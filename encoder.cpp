@@ -32,6 +32,9 @@
 
 static pthread_mutex_t csMutex =  PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
 
+// stats
+static uint64_t totalInstructionsHandled = 0;
+
 void decode_instruction_internal(uint8_t *inst, xed_decoded_inst_t *xedd, uint8_t *olen) {
     xed_machine_mode_enum_t mmode = XED_MACHINE_MODE_LONG_64;
     xed_address_width_enum_t stack_addr_width = XED_ADDRESS_WIDTH_64b;
@@ -47,6 +50,10 @@ void decode_instruction_internal(uint8_t *inst, xed_decoded_inst_t *xedd, uint8_
     printf("Length: %d, Error: %s\n",(int)xed_decoded_inst_get_length(xedd), xed_error_enum_t2str(xed_error));
     *olen = xed_decoded_inst_get_length(xedd);
     print_instr(xedd);
+}
+
+void printStats() {
+    printf("Total instructions handled: %llu\n", totalInstructionsHandled);
 }
 
 int reencode_instructions(uint8_t* instructionPointer) {
@@ -101,6 +108,7 @@ int reencode_instructions(uint8_t* instructionPointer) {
         xed_decoded_inst_t xedd;
         uint8_t olen = 15;
         decode_instruction_internal(instructionPointer + decodedInstructionLength, &xedd, &olen);
+        printStats();
         waitForDebugger();
         exit(1);
     }
@@ -113,6 +121,7 @@ int reencode_instructions(uint8_t* instructionPointer) {
     Compiler compiler;
     for (auto & instr : decodedInstructions) {
         compiler.addInstruction(instr);
+        totalInstructionsHandled++;
     }
 
     uint64_t tid;
@@ -181,6 +190,7 @@ int reencode_instructions(uint8_t* instructionPointer) {
         instructionPointer[decodedInstructionLength - 1] = 0xcc;
         jumptable_add_chunk((uint64_t)instructionPointer + (decodedInstructionLength - 1), chunk);
     }
+    printStats();
     pthread_mutex_unlock(&csMutex);
 
     return 0;

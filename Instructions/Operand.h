@@ -43,6 +43,10 @@ public:
     xed_reg_enum_t reg() const { return m_reg; }
     bool isXmm() const;
     bool isYmm() const;
+    bool is32BitRegister() const;
+    bool is64BitRegister() const;
+    xed_reg_enum_t to64BitRegister() const;
+    xed_reg_enum_t to32BitRegister() const;
     xed_reg_enum_t toXmmReg() const;
     xed_encoder_operand_t toEncoderOperand(bool upper) const;
     bool hasRipBase() const;
