@@ -14,8 +14,10 @@
 #include "VDIVSD.h"
 #include "VDIVSS.h"
 #include "VMULSD.h"
+#include "VMULSS.h"
 #include "VCVTSS2SD.h"
 #include "VCVTSI2SD.h"
+#include "VCVTSI2SS.h"
 #include "VCVTSD2SS.h"
 #include "VCVTTSS2SI.h"
 #include "VCVTTSD2SI.h"
@@ -58,6 +60,9 @@
 #include "VHADDPD.h"
 #include "VRSQRTPS.h"
 #include "VRSQRTSS.h"
+#include "SHRX.h"
+#include "ANDN.h"
+#include "VFMSUB231PS.h"
 #include <map>
 
 #ifdef __cplusplus
@@ -90,8 +95,10 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VDIVSD),
     ICLASSMAP(VDIVSS),
     ICLASSMAP(VMULSD),
+    ICLASSMAP(VMULSS),
     ICLASSMAP(VCVTSS2SD),
     ICLASSMAP(VCVTSI2SD),
+    ICLASSMAP(VCVTSI2SS),
     ICLASSMAP(VCVTSD2SS),
     ICLASSMAP(VCVTTSS2SI),
     ICLASSMAP(VCVTTSD2SI),
@@ -134,6 +141,9 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VHADDPD),
     ICLASSMAP(VRSQRTPS),
     ICLASSMAP(VRSQRTSS),
+    ICLASSMAP(SHRX),
+    ICLASSMAP(ANDN),
+    ICLASSMAP(VFMSUB231PS),
 };
 
 inline void printSupportedInstructions() {

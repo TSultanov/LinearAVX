@@ -33,7 +33,7 @@
 static pthread_mutex_t csMutex =  PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
 
 // stats
-static uint64_t totalInstructionsHandled = 0;
+static uint64_t totalInstructionsRecompiled = 0;
 
 void decode_instruction_internal(uint8_t *inst, xed_decoded_inst_t *xedd, uint8_t *olen) {
     xed_machine_mode_enum_t mmode = XED_MACHINE_MODE_LONG_64;
@@ -52,7 +52,7 @@ void decode_instruction_internal(uint8_t *inst, xed_decoded_inst_t *xedd, uint8_
 }
 
 void printStats() {
-    printf("Total instructions handled: %llu\n", totalInstructionsHandled);
+    printf("Total instructions recompiled: %llu\n", totalInstructionsRecompiled);
 }
 
 int reencode_instructions(uint8_t* instructionPointer) {
@@ -73,7 +73,7 @@ int reencode_instructions(uint8_t* instructionPointer) {
 
         if (!iclassMapping.contains(iclass)) {
             if (iclass == XED_ICLASS_NOP) {
-                printf("Why the hell we are trapping at NOP?\n");
+                printf("Why the hell are we trapping at NOP?\n");
                 // getchar();
                 return olen;
             }
@@ -118,7 +118,7 @@ int reencode_instructions(uint8_t* instructionPointer) {
     Compiler compiler;
     for (auto & instr : decodedInstructions) {
         compiler.addInstruction(instr);
-        totalInstructionsHandled++;
+        totalInstructionsRecompiled++;
     }
 
     uint64_t tid;
@@ -187,6 +187,7 @@ int reencode_instructions(uint8_t* instructionPointer) {
         instructionPointer[decodedInstructionLength - 1] = 0xcc;
         jumptable_add_chunk((uint64_t)instructionPointer + (decodedInstructionLength - 1), chunk);
     }
+    printStats();
     pthread_mutex_unlock(&csMutex);
 
     return 0;

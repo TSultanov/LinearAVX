@@ -91,10 +91,12 @@ protected:
     void divsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void divss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void mulsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void mulss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void mulpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void mulps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvtss2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvtsi2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void cvtsi2ss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvtsd2ss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void shufps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
     void shufpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
@@ -123,6 +125,9 @@ protected:
     void haddps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void haddpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void shl(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void shr(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void and_i(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void not_i(xed_encoder_operand_t op0);
     void call(xed_encoder_operand_t op);
 
     void op3(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);

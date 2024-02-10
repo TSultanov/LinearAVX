@@ -106,6 +106,36 @@ void Instruction::shl(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     internal_requests.push_back(req);
 }
 
+void Instruction::shr(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    xed_encoder_request_t req;
+    xed_encoder_instruction_t enc_inst;
+
+    xed_inst2(&enc_inst, dstate, XED_ICLASS_SHR, opWidth, op0, op1);
+    xed_convert_to_encoder_request(&req, &enc_inst);
+
+    internal_requests.push_back(req);
+}
+
+void Instruction::and_i(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    xed_encoder_request_t req;
+    xed_encoder_instruction_t enc_inst;
+
+    xed_inst2(&enc_inst, dstate, XED_ICLASS_AND, opWidth, op0, op1);
+    xed_convert_to_encoder_request(&req, &enc_inst);
+
+    internal_requests.push_back(req);
+}
+
+void Instruction::not_i(xed_encoder_operand_t op0) {
+    xed_encoder_request_t req;
+    xed_encoder_instruction_t enc_inst;
+
+    xed_inst1(&enc_inst, dstate, XED_ICLASS_NOT, opWidth, op0);
+    xed_convert_to_encoder_request(&req, &enc_inst);
+
+    internal_requests.push_back(req);
+}
+
 void Instruction::mov(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     xed_encoder_request_t req;
     xed_encoder_instruction_t enc_inst;
@@ -256,6 +286,10 @@ void Instruction::mulsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_MULSD, op0, op1);
 }
 
+void Instruction::mulss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_MULSS, op0, op1);
+}
+
 void Instruction::mulpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_MULPD, op0, op1);
 }
@@ -270,6 +304,10 @@ void Instruction::cvtss2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1)
 
 void Instruction::cvtsi2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_CVTSI2SD, op0, op1);
+}
+
+void Instruction::cvtsi2ss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_CVTSI2SS, op0, op1);
 }
 
 void Instruction::cvtsd2ss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
