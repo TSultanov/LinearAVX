@@ -210,13 +210,11 @@ void sigtrap_handler(int sig, siginfo_t *info, void *ucontext) {
         exit(1);
     }
 
-    printf("sigtrap_handler: Found chunk for rip 0x%llx at %p\n", rip, chunk);
     // Save return address on stack
     uint64_t rsp = ((ucontext_t*)ucontext)->uc_mcontext->__ss.__rsp - 8;
     uint64_t ret_addr = rip;
     *((uint64_t*)(rsp)) = ret_addr;
     ((ucontext_t*)ucontext)->uc_mcontext->__ss.__rsp = rsp;
-    printf("sigtrap_handler: Saved return address 0x%llx on stack\n", ret_addr);
 
     // Set RIP to point to chunk start
     ((ucontext_t*)ucontext)->uc_mcontext->__ss.__rip = (uint64_t)chunk;

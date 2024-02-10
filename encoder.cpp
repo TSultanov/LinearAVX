@@ -49,7 +49,6 @@ void decode_instruction_internal(uint8_t *inst, xed_decoded_inst_t *xedd, uint8_
                             instruction_length);
     printf("Length: %d, Error: %s\n",(int)xed_decoded_inst_get_length(xedd), xed_error_enum_t2str(xed_error));
     *olen = xed_decoded_inst_get_length(xedd);
-    print_instr(xedd);
 }
 
 void printStats() {
@@ -68,17 +67,9 @@ int reencode_instructions(uint8_t* instructionPointer) {
         auto currentInstrPointer = instructionPointer + decodedInstructionLength;
 
         decode_instruction_internal(currentInstrPointer, &xedd, &olen);
-
-        printf("olen = %d\n", olen);
-        for(uint32_t i = 0; i < olen; i++) {
-            printf(" %02x", (unsigned int)(*((unsigned char*)currentInstrPointer + i)));
-        }
-        printf("\n");
-
         decodedInstructionLength += olen;
 
         xed_iclass_enum_t iclass = xed_decoded_inst_get_iclass(&xedd);
-        printf("iclass = %s\n", xed_iclass_enum_t2str(iclass));
 
         if (!iclassMapping.contains(iclass)) {
             if (iclass == XED_ICLASS_NOP) {
@@ -108,14 +99,20 @@ int reencode_instructions(uint8_t* instructionPointer) {
         xed_decoded_inst_t xedd;
         uint8_t olen = 15;
         decode_instruction_internal(instructionPointer + decodedInstructionLength, &xedd, &olen);
+
+        printf("olen = %d\n", olen);
+        for(uint32_t i = 0; i < olen; i++) {
+            printf(" %02x", (unsigned int)(*((unsigned char*)instructionPointer + decodedInstructionLength + i)));
+        }
+        printf("\n");
+
+        print_instr(&xedd);
         printStats();
         waitForDebugger();
         exit(1);
     }
 
     // waitForDebugger();
-
-    printf("Compiling...\n");
 
     // compile the instructions
     Compiler compiler;
@@ -190,7 +187,6 @@ int reencode_instructions(uint8_t* instructionPointer) {
         instructionPointer[decodedInstructionLength - 1] = 0xcc;
         jumptable_add_chunk((uint64_t)instructionPointer + (decodedInstructionLength - 1), chunk);
     }
-    printStats();
     pthread_mutex_unlock(&csMutex);
 
     return 0;

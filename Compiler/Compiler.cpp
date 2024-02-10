@@ -63,12 +63,11 @@ std::vector<Compiler::instruction> Compiler::compile(CompilationStrategy compila
 
         for (uint32_t i = 0; i < requests.size(); i++) {
             xed_encoder_request_t &req = requests[i];
-            printf("%d: Encoding %s\n", i,
-                xed_iclass_enum_t2str(xed_encoder_request_get_iclass(&req)));
             instruction instr;
             xed_error_enum_t err = xed_encode(&req, instr.buffer, 15, &instr.olen);
             if (err != XED_ERROR_NONE) {
                 printf("%d: Encoder error: %s\n", i, xed_error_enum_t2str(err));
+                printf("Instruction: %s\n", xed_iclass_enum_t2str(xed_encoder_request_get_iclass(&req)));
                 exit(1);
             }
 
