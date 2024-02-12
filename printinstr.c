@@ -5,47 +5,48 @@
 #include "xed/xed-init.h"
 
 #include "printinstr.h"
+#include "utils.h"
 
 void print_memops(xed_decoded_inst_t* xedd) {
     unsigned int i, memops = xed_decoded_inst_number_of_memory_operands(xedd);
  
-    printf("Memory Operands\n");
+    debug_print("Memory Operands\n");
     
     for( i=0;i<memops ; i++)   {
         xed_bool_t r_or_w = 0;
         xed_reg_enum_t seg;
         xed_reg_enum_t base;
         xed_reg_enum_t indx;
-        printf("  %u ",i);
+        debug_print("  %u ",i);
         if ( xed_decoded_inst_mem_read(xedd,i)) {
-            printf("   read ");
+            debug_print("   read ");
             r_or_w = 1;
         }
         if (xed_decoded_inst_mem_written(xedd,i)) {
-            printf("written ");
+            debug_print("written ");
             r_or_w = 1;
         }
         if (!r_or_w) {
-            printf("   agen "); // LEA instructions
+            debug_print("   agen "); // LEA instructions
         }
         seg = xed_decoded_inst_get_seg_reg(xedd,i);
         if (seg != XED_REG_INVALID) {
-            printf("SEG= %s ", xed_reg_enum_t2str(seg));
+            debug_print("SEG= %s ", xed_reg_enum_t2str(seg));
         }
         base = xed_decoded_inst_get_base_reg(xedd,i);
         if (base != XED_REG_INVALID) {
-            printf("BASE= %3s/%3s ",
+            debug_print("BASE= %3s/%3s ",
                    xed_reg_enum_t2str(base),
                    xed_reg_class_enum_t2str(xed_reg_class(base)));
         }
         indx = xed_decoded_inst_get_index_reg(xedd,i);
         if (i == 0 && indx != XED_REG_INVALID) {
-            printf("INDEX= %3s/%3s ",
+            debug_print("INDEX= %3s/%3s ",
                    xed_reg_enum_t2str(indx),
                    xed_reg_class_enum_t2str(xed_reg_class(indx)));
             if (xed_decoded_inst_get_scale(xedd,i) != 0) {
                 // only have a scale if the index exists.
-                printf("SCALE= %u ",
+                debug_print("SCALE= %u ",
                        xed_decoded_inst_get_scale(xedd,i));
             }
         }
@@ -57,16 +58,16 @@ void print_memops(xed_decoded_inst_t* xedd) {
             if (disp_bits)
             {
                 xed_int64_t disp;
-                printf("DISPLACEMENT_BYTES= %u ", disp_bits);
+                debug_print("DISPLACEMENT_BYTES= %u ", disp_bits);
                 disp = xed_decoded_inst_get_memory_displacement(xedd,i);
-                printf("0x" XED_FMT_LX16 " base10=" XED_FMT_LD, disp, disp);
+                debug_print("0x" XED_FMT_LX16 " base10=" XED_FMT_LD, disp, disp);
             }
         }
-        printf(" ASZ%u=%u\n",
+        debug_print(" ASZ%u=%u\n",
                i,
                xed_decoded_inst_get_memop_address_width(xedd,i));
     }
-    printf("  MemopBytes = %u\n",
+    debug_print("  MemopBytes = %u\n",
            xed_decoded_inst_get_memory_operand_length(xedd,0));
 }
 
@@ -78,15 +79,15 @@ void print_operands(xed_decoded_inst_t* xedd) {
     xed_operand_action_enum_t rw;
     xed_uint_t bits;
     
-    printf("Operands\n");
+    debug_print("Operands\n");
     noperands = xed_inst_noperands(xi);
-    printf("#   TYPE               DETAILS        VIS  RW       OC2 BITS BYTES NELEM ELEMSZ   ELEMTYPE   REGCLASS\n");
-    printf("#   ====               =======        ===  ==       === ==== ===== ===== ======   ========   ========\n");
+    debug_print("#   TYPE               DETAILS        VIS  RW       OC2 BITS BYTES NELEM ELEMSZ   ELEMTYPE   REGCLASS\n");
+    debug_print("#   ====               =======        ===  ==       === ==== ===== ===== ======   ========   ========\n");
     tbuf[0]=0;
     for( i=0; i < noperands ; i++) { 
         const xed_operand_t* op = xed_inst_operand(xi,i);
         xed_operand_enum_t op_name = xed_operand_name(op);
-        printf("%u %6s ",
+        debug_print("%u %6s ",
                i,xed_operand_enum_t2str(op_name));
  
         switch(op_name) {
@@ -194,32 +195,32 @@ void print_operands(xed_decoded_inst_t* xedd) {
               break;
             }
           default: 
-            printf("need to add support for printing operand: %s",
+            debug_print("need to add support for printing operand: %s",
                    xed_operand_enum_t2str(op_name));
             assert(0);      
         }
-        printf("%21s", tbuf);
+        debug_print("%21s", tbuf);
         
         rw = xed_decoded_inst_operand_action(xedd,i);
         
-        printf(" %10s %3s %9s",
+        debug_print(" %10s %3s %9s",
                xed_operand_visibility_enum_t2str(
                    xed_operand_operand_visibility(op)),
                xed_operand_action_enum_t2str(rw),
                xed_operand_width_enum_t2str(xed_operand_width(op)));
  
         bits =  xed_decoded_inst_operand_length_bits(xedd,i);
-        printf( "  %3u", bits);
+        debug_print( "  %3u", bits);
         /* rounding, bits might not be a multiple of 8 */
-        printf("  %4u", (bits +7) >> 3);
+        debug_print("  %4u", (bits +7) >> 3);
  
-        printf("    %2u", xed_decoded_inst_operand_elements(xedd,i));
-        printf("    %3u", xed_decoded_inst_operand_element_size_bits(xedd,i));
+        debug_print("    %2u", xed_decoded_inst_operand_elements(xedd,i));
+        debug_print("    %3u", xed_decoded_inst_operand_element_size_bits(xedd,i));
         
-        printf(" %10s",
+        debug_print(" %10s",
                xed_operand_element_type_enum_t2str(
                    xed_decoded_inst_operand_element_type(xedd,i)));
-        printf(" %10s\n",
+        debug_print(" %10s\n",
                xed_reg_class_enum_t2str(
                    xed_reg_class(
                        xed_decoded_inst_get_reg(xedd, op_name))));
@@ -232,17 +233,17 @@ void print_flags(xed_decoded_inst_t* xedd) {
     if (xed_decoded_inst_uses_rflags(xedd)) {
         const xed_simple_flag_t* rfi = xed_decoded_inst_get_rflags_info(xedd);
         assert(rfi);
-        printf("FLAGS:\n");
+        debug_print("FLAGS:\n");
         if (xed_simple_flag_reads_flags(rfi)) {
-            printf("   reads-rflags ");
+            debug_print("   reads-rflags ");
         }
         else if (xed_simple_flag_writes_flags(rfi)) {
             //XED provides may-write and must-write information
             if (xed_simple_flag_get_may_write(rfi)) {
-                printf("  may-write-rflags ");
+                debug_print("  may-write-rflags ");
             }
             if (xed_simple_flag_get_must_write(rfi)) {
-                printf("  must-write-rflags ");
+                debug_print("  must-write-rflags ");
             }
         }
         nflags = xed_simple_flag_get_nflags(rfi);
@@ -251,9 +252,9 @@ void print_flags(xed_decoded_inst_t* xedd) {
                 xed_simple_flag_get_flag_action(rfi,i);
             char buf[500];
             xed_flag_action_print(fa,buf,500);
-            printf("%s ", buf);
+            debug_print("%s ", buf);
         }
-        printf("\n");
+        debug_print("\n");
         // or as as bit-union
         {
             xed_flag_set_t const*  read_set =
@@ -265,15 +266,15 @@ void print_flags(xed_decoded_inst_t* xedd) {
                 xed_simple_flag_get_undefined_flag_set(rfi);
             char buf[500];
             xed_flag_set_print(read_set,buf,500);
-            printf("       read: %30s mask=0x%x\n",
+            debug_print("       read: %30s mask=0x%x\n",
                    buf,
                    xed_flag_set_mask(read_set));
             xed_flag_set_print(written_set,buf,500);
-            printf("    written: %30s mask=0x%x\n",
+            debug_print("    written: %30s mask=0x%x\n",
                    buf,
                    xed_flag_set_mask(written_set));
             xed_flag_set_print(undefined_set,buf,500);
-            printf("  undefined: %30s mask=0x%x\n",
+            debug_print("  undefined: %30s mask=0x%x\n",
                    buf,
                    xed_flag_set_mask(undefined_set));
         }
@@ -284,7 +285,7 @@ void print_flags(xed_decoded_inst_t* xedd) {
             xed_flag_dfv_t dfv_reg;
             xed_bool_t okay = xed_flag_dfv_get_default_flags_values(dfv_enum, &dfv_reg);
             assert(okay);
-            printf("    default:%13sof=%d, sf=%d, zf=%d, cf=%d\n",
+            debug_print("    default:%13sof=%d, sf=%d, zf=%d, cf=%d\n",
                     "",
                     dfv_reg.s.of,
                     dfv_reg.s.sf,
@@ -301,7 +302,7 @@ void print_reads_zf_flag(xed_decoded_inst_t* xedd) {
         xed_simple_flag_t const* rfi = xed_decoded_inst_get_rflags_info(xedd);
         xed_flag_set_t const* read_set = xed_simple_flag_get_read_flag_set(rfi);
         if (read_set->s.zf) {
-            printf("READS ZF\n");
+            debug_print("READS ZF\n");
         }
     }
 }
@@ -314,17 +315,17 @@ void print_attributes(xed_decoded_inst_t* xedd) {
  
     unsigned int i, nattributes  =  xed_attribute_max();
  
-    printf("ATTRIBUTES: ");
+    debug_print("ATTRIBUTES: ");
     for(i=0;i<nattributes;i++) {
         xed_attribute_enum_t attr = xed_attribute(i);
         if (xed_inst_get_attribute(xi,attr))
-            printf("%s ", xed_attribute_enum_t2str(attr));
+            debug_print("%s ", xed_attribute_enum_t2str(attr));
     }
-    printf("\n");
+    debug_print("\n");
 }
 
 void print_instr(xed_decoded_inst_t* xedd) {
-    printf("iform-enum-name %s\n", 
+    debug_print("iform-enum-name %s\n", 
            xed_iform_enum_t2str(xed_decoded_inst_get_iform_enum(xedd)));
     print_operands(xedd);
     print_memops(xedd);

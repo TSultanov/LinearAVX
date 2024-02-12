@@ -47,12 +47,12 @@ void decode_instruction_internal(uint8_t *inst, xed_decoded_inst_t *xedd, uint8_
     xed_error = xed_decode(xedd, 
                             XED_STATIC_CAST(const xed_uint8_t*,inst),
                             instruction_length);
-    printf("Length: %d, Error: %s\n",(int)xed_decoded_inst_get_length(xedd), xed_error_enum_t2str(xed_error));
+    debug_print("Length: %d, Error: %s\n",(int)xed_decoded_inst_get_length(xedd), xed_error_enum_t2str(xed_error));
     *olen = xed_decoded_inst_get_length(xedd);
 }
 
 void printStats() {
-    printf("Total instructions recompiled: %llu\n", totalInstructionsRecompiled);
+    debug_print("Total instructions recompiled: %llu\n", totalInstructionsRecompiled);
 }
 
 int reencode_instructions(uint8_t* instructionPointer) {
@@ -73,15 +73,16 @@ int reencode_instructions(uint8_t* instructionPointer) {
 
         if (!iclassMapping.contains(iclass)) {
             if (iclass == XED_ICLASS_NOP) {
-                printf("Why the hell are we trapping at NOP?\n");
+                debug_print("Why the hell are we trapping at NOP?\n");
+                pthread_mutex_unlock(&csMutex);
                 // getchar();
                 return olen;
             }
 
             // We found an unsupported instruction, stop decoding and try to compile
-            printf("Unsupported instruction %s (%d) found, stopping decoding\n", xed_iclass_enum_t2str(iclass), iclass);
+            debug_print("Unsupported instruction %s (%d) found, stopping decoding\n", xed_iclass_enum_t2str(iclass), iclass);
             decodedInstructionLength -= olen;
-            // printf("Supported instructions:\n");
+            // debug_print("Supported instructions:\n");
             // printSupportedInstructions();
             break;
         }
@@ -94,22 +95,23 @@ int reencode_instructions(uint8_t* instructionPointer) {
     }
 
     if (decodedInstructions.empty()) {
-        printf("No supported instructions found\n");
-        printf("Last decoded instruction:\n");
+        debug_print("No supported instructions found\n");
+        debug_print("Last decoded instruction:\n");
         xed_decoded_inst_t xedd;
         uint8_t olen = 15;
         decode_instruction_internal(instructionPointer + decodedInstructionLength, &xedd, &olen);
 
-        printf("olen = %d\n", olen);
+        debug_print("olen = %d\n", olen);
         for(uint32_t i = 0; i < olen; i++) {
-            printf(" %02x", (unsigned int)(*((unsigned char*)instructionPointer + decodedInstructionLength + i)));
+            debug_print(" %02x", (unsigned int)(*((unsigned char*)instructionPointer + decodedInstructionLength + i)));
         }
-        printf("\n");
+        debug_print("\n");
 
         print_instr(&xedd);
         printStats();
+        pthread_mutex_unlock(&csMutex);
         waitForDebugger();
-        exit(1);
+        return -1;
     }
 
     // waitForDebugger();
@@ -128,7 +130,7 @@ int reencode_instructions(uint8_t* instructionPointer) {
 
     kern_return_t kret = vm_protect(current_task(), (vm_address_t)instructionPointer, decodedInstructionLength, FALSE, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE | VM_PROT_ALL);
     if (kret != KERN_SUCCESS) {
-        printf("vm_protect failed: %d\n", kret);
+        debug_print("vm_protect failed: %d\n", kret);
         exit(1);
     }
 
@@ -143,14 +145,14 @@ int reencode_instructions(uint8_t* instructionPointer) {
         uint32_t encodedLength = 0;
         uint8_t* chunk = compiler.encode(CompilationStrategy::FarJump, &encodedLength, (uint64_t)instructionPointer + decodedInstructionLength - 1);
 
-        printf("Chunk at %llx, length %d\n", (uint64_t)chunk, encodedLength);
+        debug_print("Chunk at %llx, length %d\n", (uint64_t)chunk, encodedLength);
 
         // fill nops
         uint32_t i = 0;
         for (i = 0; i < decodedInstructionLength - trampolineSize; i++) {
             instructionPointer[i] = 0x90;
         }
-        printf("Written %d nops, will emit trampoline at %llx\n", i, (uint64_t)instructionPointer + i);
+        debug_print("Written %d nops, will emit trampoline at %llx\n", i, (uint64_t)instructionPointer + i);
 
 
         // PUSH RAX

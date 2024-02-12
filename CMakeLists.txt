@@ -29,6 +29,7 @@ add_library(avxhandler SHARED
     Instructions/VMOVUPS.h
     Instructions/VMOVSS.h
     Instructions/VXORPS.h
+    utils.c
     )
 target_include_directories(avxhandler PRIVATE ../xed/kits/xed/include)
 target_link_directories(avxhandler PRIVATE ../xed/kits/xed/lib)

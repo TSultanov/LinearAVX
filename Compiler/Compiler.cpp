@@ -1,4 +1,5 @@
 #include "Compiler.h"
+#include "xed/xed-decoded-inst.h"
 #include "xed/xed-iform-enum.h"
 #include "xed/xed-reg-enum.h"
 #include <__format/formatter.h>
@@ -30,7 +31,7 @@ void decode_instruction3(unsigned char *inst, xed_decoded_inst_t *xedd, uint32_t
     xed_error = xed_decode(xedd, 
                             XED_STATIC_CAST(const xed_uint8_t*,inst),
                             instruction_length);
-    printf("Length: %d, Error: %s\n",(int)xed_decoded_inst_get_length(xedd), xed_error_enum_t2str(xed_error));
+    debug_print("Length: %d, Error: %s\n",(int)xed_decoded_inst_get_length(xedd), xed_error_enum_t2str(xed_error));
     *olen = xed_decoded_inst_get_length(xedd);
     print_instr(xedd);
 }
@@ -59,15 +60,19 @@ std::vector<Compiler::instruction> Compiler::compile(CompilationStrategy compila
     for (auto& instr : instructions) {
         auto requests = instr->compile(compilationStrategy);
 
-        printf("Compiling %s...\n", xed_iform_enum_t2str(instr->getIform()));
+        debug_print("Compiling %s...\n", xed_iform_enum_t2str(instr->getIform()));
 
         for (uint32_t i = 0; i < requests.size(); i++) {
             xed_encoder_request_t &req = requests[i];
-            instruction instr;
-            xed_error_enum_t err = xed_encode(&req, instr.buffer, 15, &instr.olen);
+            instruction instr2;
+            xed_error_enum_t err = xed_encode(&req, instr2.buffer, 15, &instr2.olen);
             if (err != XED_ERROR_NONE) {
-                printf("%d: Encoder error: %s\n", i, xed_error_enum_t2str(err));
-                printf("Instruction: %s\n", xed_iclass_enum_t2str(xed_encoder_request_get_iclass(&req)));
+                print_instr((xed_decoded_inst_t*)instr->getDecodedInstr());
+                for (uint32_t j = 0; j <= i; j++){
+                    debug_print("%d: Compiled %s\n", j, xed_iclass_enum_t2str(xed_encoder_request_get_iclass(&requests[j])));
+                }
+                debug_print("%d: Encoder error: %s\n", i, xed_error_enum_t2str(err));
+                debug_print("Instruction: %s\n", xed_iclass_enum_t2str(xed_encoder_request_get_iclass(&req)));
                 exit(1);
             }
 
@@ -75,7 +80,7 @@ std::vector<Compiler::instruction> Compiler::compile(CompilationStrategy compila
             // uint32_t olen;
             // decode_instruction3(instr.buffer, &xedd, &olen);
 
-            encodedInstructions.push_back(instr);
+            encodedInstructions.push_back(instr2);
         }
     }
 
@@ -114,7 +119,7 @@ std::vector<Compiler::instruction> Compiler::compile(CompilationStrategy compila
         instruction instr;
         xed_error_enum_t err = xed_encode(&req, instr.buffer, 15, &instr.olen);
         if (err != XED_ERROR_NONE) {
-            printf("Encoder error: %s\n", xed_error_enum_t2str(err));
+            debug_print("Encoder error: %s\n", xed_error_enum_t2str(err));
             exit(1);
         }
 

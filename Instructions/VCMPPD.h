@@ -21,7 +21,7 @@ private:
                 cmppd(op0, op1, xed_imm0(0x06, 8));
             });
         } else {
-            printf("VCMPPD: Unsupported mode %llx\n", mode);
+            debug_print("VCMPPD: Unsupported mode %llx\n", mode);
             exit(1);
         }
 

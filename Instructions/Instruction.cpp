@@ -53,7 +53,7 @@ xed_encoder_operand_t offsetRsp(xed_encoder_operand_t op, int64_t offset) {
             op.u.mem.disp.displacement -= offset;
         }
         if (op.u.mem.index == XED_REG_RSP) {
-            printf("RSP index not supported\n");
+            debug_print("RSP index not supported\n");
             exit(1);
         }
     }
@@ -298,6 +298,18 @@ void Instruction::mulps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_MULPD, op0, op1);
 }
 
+void Instruction::pand(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PAND, op0, op1);
+}
+
+void Instruction::por(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_POR, op0, op1);
+}
+
+void Instruction::psrld(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PSRLD, op0, op1);
+}
+
 void Instruction::cvtss2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_CVTSS2SD, op0, op1);
 }
@@ -336,6 +348,34 @@ void Instruction::shufps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, x
 
 void Instruction::shufpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
     op3(XED_ICLASS_SHUFPD, op0, op1, op2);
+}
+
+void Instruction::pshufhw(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_PSHUFHW, op0, op1, op2);
+}
+
+void Instruction::pshuflw(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_PSHUFLW, op0, op1, op2);
+}
+
+void Instruction::pextrw(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_PEXTRW_SSE4, op0, op1, op2);
+}
+
+void Instruction::pextrq(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_PEXTRQ, op0, op1, op2);
+}
+
+void Instruction::pextrd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_PEXTRD, op0, op1, op2);
+}
+
+void Instruction::pextrb(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_PEXTRB, op0, op1, op2);
+}
+
+void Instruction::extractps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_EXTRACTPS, op0, op1, op2);
 }
 
 void Instruction::pxor(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
@@ -428,6 +468,30 @@ void Instruction::haddps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
 
 void Instruction::haddpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_HADDPD, op0, op1);
+}
+
+void Instruction::maxss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_MAXSS, op0, op1);
+}
+
+void Instruction::maxsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_MAXSD, op0, op1);
+}
+
+void Instruction::minss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_MINSS, op0, op1);
+}
+
+void Instruction::minsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_MINSD, op0, op1);
+}
+
+void Instruction::comiss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_COMISS, op0, op1);
+}
+
+void Instruction::comisd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_COMISD, op0, op1);
 }
 
 void Instruction::cmppd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
@@ -685,7 +749,7 @@ void Instruction::withRipSubstitution(std::function<void(std::function<xed_encod
     } else
     if (usesRipAddressing() && usesRspAddressing()) {
         withFreeReg([=](xed_reg_enum_t tempRipReg) {
-            mov(tempRipReg, rip);
+            mov(tempRipReg, rip+ilen);
             instr([=](xed_encoder_operand_t op) {
                 if (op.type == XED_ENCODER_OPERAND_TYPE_MEM) {
                     if (op.u.mem.base == XED_REG_RSP || op.u.mem.base == XED_REG_ESP) {
@@ -734,11 +798,11 @@ void Instruction::add(xed_reg_enum_t reg, int8_t immediate) {
 
 void Instruction::withPreserveXmmReg(Operand const& op, std::function<void()> instr) {
     if (op.isYmm()) {
-        printf("Preserving YMM is not supported yet\n");
+        debug_print("Preserving YMM is not supported yet\n");
     }
 
     if (!op.isXmm()) {
-        printf("Only XMM registers are supported\n");
+        debug_print("Only XMM registers are supported\n");
     }
 
     withPreserveXmmReg(op.toXmmReg(), instr);

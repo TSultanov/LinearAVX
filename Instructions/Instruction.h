@@ -19,6 +19,7 @@ extern "C" {
 #include <vector>
 #include "Operand.h"
 #include "../memmanager.h"
+#include "../utils.h"
 
 enum class CompilationStrategy {
     DirectCall,
@@ -50,7 +51,7 @@ protected:
     const uint8_t ilen;
 
     const xed_inst_t *xi;
-    const xed_encoder_request_t xedd;
+    const xed_decoded_inst_t xedd;
     std::vector<xed_encoder_request_t> internal_requests;
     std::vector<Operand> operands;
 
@@ -94,12 +95,28 @@ protected:
     void mulss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void mulpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void mulps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void maxss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void maxsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void minss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void minsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void comiss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void comisd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void pand(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void por(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void psrld(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvtss2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvtsi2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvtsi2ss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvtsd2ss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void shufps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
     void shufpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
+    void pshufhw(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
+    void pshuflw(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
+    void pextrw(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
+    void pextrq(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
+    void pextrd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
+    void pextrb(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
+    void extractps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
     void pxor(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void unpckhps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void unpcklps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
@@ -158,4 +175,6 @@ protected:
     public:
     virtual std::vector<xed_encoder_request_t> const& compile(CompilationStrategy compilationStrategy, uint64_t returnAddr = 0) = 0;
     xed_iform_enum_t getIform() const;
+
+    const xed_decoded_inst_t* getDecodedInstr() const { return &xedd; }
 };

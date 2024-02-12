@@ -63,6 +63,18 @@
 #include "SHRX.h"
 #include "ANDN.h"
 #include "VFMSUB231PS.h"
+#include "VCVTPS2PH.h"
+#include "VPEXTRW.h"
+#include "VPEXTRQ.h"
+#include "VPEXTRD.h"
+#include "VPEXTRB.h"
+#include "VEXTRACTPS.h"
+#include "VMAXSS.h"
+#include "VMAXSD.h"
+#include "VMINSS.h"
+#include "VMINSD.h"
+#include "VCOMISS.h"
+#include "VCOMISD.h"
 #include <map>
 
 #ifdef __cplusplus
@@ -144,10 +156,22 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(SHRX),
     ICLASSMAP(ANDN),
     ICLASSMAP(VFMSUB231PS),
+    ICLASSMAP(VCVTPS2PH),
+    ICLASSMAP(VPEXTRW),
+    ICLASSMAP(VPEXTRQ),
+    ICLASSMAP(VPEXTRD),
+    ICLASSMAP(VPEXTRB),
+    ICLASSMAP(VEXTRACTPS),
+    ICLASSMAP(VMAXSS),
+    ICLASSMAP(VMAXSD),
+    ICLASSMAP(VMINSS),
+    ICLASSMAP(VMINSD),
+    ICLASSMAP(VCOMISS),
+    ICLASSMAP(VCOMISD),
 };
 
 inline void printSupportedInstructions() {
     for (auto const& [iclass, factory] : iclassMapping) {
-        printf("%s (%d)\n", xed_iclass_enum_t2str(iclass), iclass);
+        debug_print("%s (%d)\n", xed_iclass_enum_t2str(iclass), iclass);
     }
 }

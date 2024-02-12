@@ -6,7 +6,7 @@ public:
 private:
     void implementation(bool upper, bool compile_inline) {
         if (!operands[2].isImmediate()) {
-            printf("VPERMILPS: only immeddiate SRC2 (operand 2) argument is supported!\n");
+            debug_print("VPERMILPS: only immeddiate SRC2 (operand 2) argument is supported!\n");
             exit(1);
         }
 

@@ -104,7 +104,7 @@ xed_encoder_operand_t Operand::toEncoderOperand(bool upper) const {
     if (isMemoryOperand()) {
         auto width = xed_decoded_inst_get_memory_displacement_width_bits(xedd, 0);
 
-        // printf("width: %d\n", width);
+        // debug_print("width: %d\n", width);
 
         auto mem_width = xed_decoded_inst_operand_length_bits(xedd, index);
         xed_uint_t actual_mem_width = mem_width;
@@ -120,10 +120,10 @@ xed_encoder_operand_t Operand::toEncoderOperand(bool upper) const {
         }
         width = 32;
 
-        // printf("mem_width: %d\n", mem_width);
-        // printf("actual_mem_width: %d\n", actual_mem_width);
-        // printf("displacement width = %d\n", width);
-        // printf("displacement: %llx\n", displacement);
+        // debug_print("mem_width: %d\n", mem_width);
+        // debug_print("actual_mem_width: %d\n", actual_mem_width);
+        // debug_print("displacement width = %d\n", width);
+        // debug_print("displacement: %llx\n", displacement);
 
         auto disp = xed_disp(
             displacement, 
@@ -169,7 +169,7 @@ xed_encoder_operand_t Operand::toEncoderOperand(bool upper) const {
 
     if (isYmm() || isXmm()) {
         auto xmmReg = toXmmReg();
-        // printf("xxmReg = %s\n", xed_reg_enum_t2str(xmmReg));
+        // debug_print("xxmReg = %s\n", xed_reg_enum_t2str(xmmReg));
         return xed_reg(xmmReg);
     }
 

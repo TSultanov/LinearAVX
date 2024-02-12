@@ -6,7 +6,7 @@ public:
 private:
     void implementation(bool upper, bool compile_inline) {
         if (usesYmm()) {
-            printf("VMOVMSKPS: YMM registers support is not implemented!\n");
+            debug_print("VMOVMSKPS: YMM registers support is not implemented!\n");
             exit(1);
         }
 
