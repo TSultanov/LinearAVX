@@ -2,6 +2,8 @@
 #include "Instruction.h"
 #include "xed/xed-encoder-hl.h"
 #include "xed/xed-reg-enum.h"
+#include "Metadata.h"
+
 template<class T>
 class CompilableInstruction : public Instruction {
 protected:
