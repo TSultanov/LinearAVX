@@ -26,6 +26,20 @@ struct TestThunk {
     const void* compiledTranslatedThunk;
 };
 
+class ThunkRegisters {
+    std::vector<uint64_t> gpRegsValuesTemp;
+    std::vector<__m256> ymmRegsValuesTemp;
+    std::vector<uint64_t> gpRegsValuesInOut;
+    std::vector<__m256> ymmRegsValuesInOut;
+    std::unordered_map<xed_reg_enum_t, size_t> gpMap;
+    std::unordered_map<xed_reg_enum_t, size_t> ymmMap;
+public:
+    uint64_t* getGprTempPtr(xed_reg_enum_t reg);
+    __m256* getYmmTempPtr(xed_reg_enum_t reg);
+    uint64_t* getGprInOutPtr(xed_reg_enum_t reg);
+    __m256* getYmmInOutPtr(xed_reg_enum_t reg);
+};
+
 union RegValueUnion {
     uint64_t value64;
     __m128 value128;

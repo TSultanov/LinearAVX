@@ -1,6 +1,7 @@
 #pragma once
 #include <unordered_set>
 #include <vector>
+#include <memory>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -66,23 +67,10 @@ public:
     TestCompiler(InstructionMetadata const& metadata);
 
     std::vector<std::shared_ptr<ThunkRequest>> generateInstructions() const;
+    static const std::vector<xed_reg_enum_t> gpRegs;
+    static const std::vector<xed_reg_enum_t> xmmRegs;
+    static const std::vector<xed_reg_enum_t> ymmRegs;
+
 private:
-    const std::vector<xed_reg_enum_t> gpRegs = {
-        XED_REG_RAX, XED_REG_RBX, XED_REG_RCX, XED_REG_RDX, XED_REG_RSI, XED_REG_RDI, XED_REG_R8, XED_REG_R9,
-        XED_REG_R10, XED_REG_R11, XED_REG_R12, XED_REG_R13, XED_REG_R14, XED_REG_R15
-    };
-
-    const std::vector<xed_reg_enum_t> xmmRegs = {
-        XED_REG_XMM0, XED_REG_XMM1, XED_REG_XMM2, XED_REG_XMM3, XED_REG_XMM4, XED_REG_XMM5, XED_REG_XMM6, XED_REG_XMM7,
-        XED_REG_XMM8, XED_REG_XMM9, XED_REG_XMM10, XED_REG_XMM11, XED_REG_XMM12, XED_REG_XMM13, XED_REG_XMM14,
-        XED_REG_XMM15
-    };
-
-    const std::vector<xed_reg_enum_t> ymmRegs = {
-        XED_REG_YMM0, XED_REG_YMM1, XED_REG_YMM2, XED_REG_YMM3, XED_REG_YMM4, XED_REG_YMM5, XED_REG_YMM6, XED_REG_YMM7,
-        XED_REG_YMM8, XED_REG_YMM9, XED_REG_YMM10, XED_REG_YMM11, XED_REG_YMM12, XED_REG_YMM13, XED_REG_YMM14,
-        XED_REG_YMM15
-    };
-
     std::shared_ptr<ThunkRequest> generateInstruction(OperandsMetadata const& operands) const;
 };
