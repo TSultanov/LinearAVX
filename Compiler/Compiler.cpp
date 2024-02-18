@@ -2,7 +2,7 @@
 #include "xed/xed-decoded-inst.h"
 #include "xed/xed-iform-enum.h"
 #include "xed/xed-reg-enum.h"
-#include <__format/formatter.h>
+#include <cstring>
 #include <memory>
 
 extern "C" {
@@ -15,7 +15,6 @@ extern "C" {
 #include "../memmanager.h"
 #include <vector>
 #include <iostream>
-#include <format>
 
 #include "../utils.h"
 

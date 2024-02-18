@@ -1,3 +1,4 @@
+#include "Harness.h"
 #include "TestCompiler.h"
 
 #include <cstdio>
@@ -7,8 +8,9 @@
 
 int main() {
     TestCompiler compiler(VSUBPS::Metadata);
-    auto request = compiler.generateInstructions();
-    // TODO: Rename TestCompiler to TestGenerator
-    // TODO: Compile generated tests to both native AVX and translated AVX
-    // TODO: Make test runner harness which can track registers statuses
+    auto thunks = compiler.getThunks();
+    for (auto const& thunk : thunks) {
+        Harness harness(thunk);
+        auto result = harness.runTests();
+    }
 }

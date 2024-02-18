@@ -1,7 +1,6 @@
 #ifndef __ENCODER_H__
 #define __ENCODER_H__
 
-#include <_types/_uint64_t.h>
 #ifdef __cplusplus
 extern "C" {
 #endif

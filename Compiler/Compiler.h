@@ -7,6 +7,7 @@ extern "C"{
 }
 
 #include <vector>
+#include <memory>
 #include "../Instructions/Instruction.h"
 
 class Compiler {

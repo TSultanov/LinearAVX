@@ -61,16 +61,40 @@ struct ThunkRequest {
     const xed_encoder_request_t instructionRequest;
 };
 
+struct TestThunk {
+    TestThunk(std::unordered_set<xed_reg_enum_t> const& usedRegisters,
+    TempMemory const& usedMemory,
+    const void* compiledNativeThunk,
+    const void* compiledTranslatedThunk)
+    : usedRegisters(usedRegisters)
+    , usedMemory(usedMemory)
+    , compiledNativeThunk(compiledNativeThunk)
+    , compiledTranslatedThunk(compiledTranslatedThunk)
+    {}
+
+    const std::unordered_set<xed_reg_enum_t> usedRegisters;
+    TempMemory usedMemory;
+    const void* compiledNativeThunk;
+    const void* compiledTranslatedThunk;
+};
+
 class TestCompiler {
     InstructionMetadata const& metadata;
 public:
     TestCompiler(InstructionMetadata const& metadata);
 
-    std::vector<std::shared_ptr<ThunkRequest>> generateInstructions() const;
+    std::vector<TestThunk> getThunks() const;
+
+    static void* compileRequests(std::vector<xed_encoder_request_t> requests);
+
     static const std::vector<xed_reg_enum_t> gpRegs;
     static const std::vector<xed_reg_enum_t> xmmRegs;
     static const std::vector<xed_reg_enum_t> ymmRegs;
 
 private:
-    std::shared_ptr<ThunkRequest> generateInstruction(OperandsMetadata const& operands) const;
+    std::vector<ThunkRequest> generateInstructions() const;
+    ThunkRequest generateInstruction(OperandsMetadata const& operands) const;
+    TestThunk compileThunk(ThunkRequest const& request) const;
+    void* compileNativeThunk(ThunkRequest const& request) const;
+    void* compileTranslatedThunk(ThunkRequest const& request) const;
 };

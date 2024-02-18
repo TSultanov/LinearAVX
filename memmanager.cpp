@@ -1,13 +1,13 @@
 #include "memmanager.h"
 #include "xed/xed-iclass-enum.h"
 #include <dlfcn.h>
-#include <mach/mach_traps.h>
-#include <mach/vm_map.h>
-#include <mach/vm_prot.h>
-#include <mach/mach_init.h>
+// #include <mach/mach_traps.h>
+// #include <mach/vm_map.h>
+// #include <mach/vm_prot.h>
+// #include <mach/mach_init.h>
 #include <memory>
 #include <pthread.h>
-#include <sys/_pthread/_pthread_key_t.h>
+// #include <sys/_pthread/_pthread_key_t.h>
 #include <unordered_map>
 #include <sys/mman.h>
 

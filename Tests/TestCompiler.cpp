@@ -1,16 +1,20 @@
 #include "TestCompiler.h"
 
+#include <cstring>
 #include <xed/xed-interface.h>
 #include "xed/xed-decoded-inst-api.h"
+#include "xed/xed-decoded-inst.h"
+#include "xed/xed-encode.h"
 #include "xed/xed-reg-class-enum.h"
 #include "xed/xed-reg-enum.h"
 
-#include <memory>
 #include <optional>
 #include <sys/unistd.h>
 #include <unordered_set>
 #include <vector>
-#include <ranges>
+#include "../memmanager.h"
+#include "../Compiler/Compiler.h"
+#include "../Instructions/Instructions.h"
 
 static xed_state_t dstate {
     .mmode = XED_MACHINE_MODE_LONG_64,
@@ -38,8 +42,8 @@ TestCompiler::TestCompiler(InstructionMetadata const& metadata)
 : metadata(metadata)
 {}
 
-std::vector<std::shared_ptr<ThunkRequest>> TestCompiler::generateInstructions() const {
-    std::vector<std::shared_ptr<ThunkRequest>> ret;
+std::vector<ThunkRequest> TestCompiler::generateInstructions() const {
+    std::vector<ThunkRequest> ret;
     for(auto const& op : metadata.operandSets) {
         auto inst = generateInstruction(op);
         ret.emplace_back(inst);
@@ -47,7 +51,7 @@ std::vector<std::shared_ptr<ThunkRequest>> TestCompiler::generateInstructions() 
     return ret;
 }
 
-std::shared_ptr<ThunkRequest> TestCompiler::generateInstruction(OperandsMetadata const& om) const {
+ThunkRequest TestCompiler::generateInstruction(OperandsMetadata const& om) const {
     xed_encoder_request_t req;
     xed_encoder_instruction_t enc_inst;
     xed_encoder_request_zero_set_mode(&req, &dstate);
@@ -167,5 +171,70 @@ std::shared_ptr<ThunkRequest> TestCompiler::generateInstruction(OperandsMetadata
     xed_convert_to_encoder_request(&req, &enc_inst);
     xed3_operand_set_vl(&req, om.vectorLength);
 
-    return std::make_shared<ThunkRequest>(usedRegisters, TempMemory(baseReg, memory), req);
+    return ThunkRequest(usedRegisters, TempMemory(baseReg, memory), req);
+}
+
+void* TestCompiler::compileRequests(std::vector<xed_encoder_request_t> requests) {
+    struct compiledInstruction {
+        uint8_t buf[15];
+        uint32_t length;
+    };
+    std::vector<compiledInstruction> instructions;
+
+    for (auto& req : requests) {
+        compiledInstruction instr;
+        auto err = xed_encode(&req, instr.buf, 15, &instr.length);
+        if (err != XED_ERROR_NONE) {
+            printf("Error encoding %s\n", xed_iclass_enum_t2str(xed_decoded_inst_get_iclass(&req)));
+            exit(1);
+        }
+        instructions.push_back(instr);
+    }
+
+    uint32_t totalOlen = 0;
+    for (auto const& instr : instructions) {
+        totalOlen += instr.length;
+    }
+
+    uint8_t* stencil = alloc_executable(totalOlen);
+    uint32_t offset = 0;
+    for (auto const &instr : instructions) {
+        memcpy(stencil + offset, instr.buf, instr.length);
+        offset += instr.length;
+    }
+    return stencil;
+}
+
+TestThunk TestCompiler::compileThunk(ThunkRequest const& request) const {
+    void* nativeThunk = compileNativeThunk(request);
+    void* translatedThunk = compileTranslatedThunk(request);
+
+    return TestThunk(request.usedRegisters, request.usedMemory, nativeThunk, translatedThunk);
+}
+
+void* TestCompiler::compileNativeThunk(ThunkRequest const& request) const {
+    std::vector<xed_encoder_request_t> requests;
+    requests.push_back(request.instructionRequest);
+
+    return compileRequests(requests);
+}
+
+void* TestCompiler::compileTranslatedThunk(ThunkRequest const& request) const {
+    xed_iclass_enum_t iclass = xed_decoded_inst_get_iclass(&request.instructionRequest);
+    auto instructionFactory = iclassMapping.at(iclass);
+    auto instruction = instructionFactory(0, 0, request.instructionRequest);
+
+    Compiler compiler;
+    compiler.addInstruction(instruction);
+    uint32_t olen;
+    return compiler.encode(CompilationStrategy::DirectCall, &olen, 0);
+}
+
+std::vector<TestThunk> TestCompiler::getThunks() const {
+    auto thunks = generateInstructions();
+    std::vector<TestThunk> ret;
+    for (auto const& req : thunks) {
+        ret.emplace_back(compileThunk(req));
+    }
+    return ret;
 }

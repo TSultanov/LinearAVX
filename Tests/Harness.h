@@ -4,27 +4,9 @@
 #include "xed/xed-reg-enum.h"
 #include <emmintrin.h>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 #include <xmmintrin.h>
 #include <immintrin.h>
-
-struct TestThunk {
-    TestThunk(std::unordered_set<xed_reg_enum_t> const& usedRegisters,
-    TempMemory const& usedMemory,
-    const void* compiledNativeThunk,
-    const void* compiledTranslatedThunk)
-    : usedRegisters(usedRegisters)
-    , usedMemory(usedMemory)
-    , compiledNativeThunk(compiledNativeThunk)
-    , compiledTranslatedThunk(compiledTranslatedThunk)
-    {}
-
-    const std::unordered_set<xed_reg_enum_t> usedRegisters;
-    TempMemory usedMemory;
-    const void* compiledNativeThunk;
-    const void* compiledTranslatedThunk;
-};
 
 class ThunkRegisters {
     std::vector<uint64_t> gpRegsValuesTemp;

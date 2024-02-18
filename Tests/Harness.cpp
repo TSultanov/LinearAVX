@@ -14,7 +14,6 @@
 #include <vector>
 #include <xmmintrin.h>
 #include <ucontext.h>
-#include "../memmanager.h"
 
 uint64_t* ThunkRegisters::getGprTempPtr(xed_reg_enum_t reg) {
     if (gpMap.contains(reg)) {
@@ -205,37 +204,6 @@ std::vector<xed_encoder_request_t> generateHarness(ThunkRegisters & registers, c
     return requests;
 }
 
-void* compileHarness(std::vector<xed_encoder_request_t> requests) {
-    struct compiledInstruction {
-        uint8_t buf[15];
-        uint32_t length;
-    };
-    std::vector<compiledInstruction> instructions;
-
-    for (auto& req : requests) {
-        compiledInstruction instr;
-        auto err = xed_encode(&req, instr.buf, 15, &instr.length);
-        if (err != XED_ERROR_NONE) {
-            printf("Error encoding %s\n", xed_iclass_enum_t2str(xed_decoded_inst_get_iclass(&req)));
-            exit(1);
-        }
-        instructions.push_back(instr);
-    }
-
-    uint32_t totalOlen = 0;
-    for (auto const& instr : instructions) {
-        totalOlen += instr.length;
-    }
-
-    uint8_t* stencil = alloc_executable(totalOlen);
-    uint32_t offset = 0;
-    for (auto const &instr : instructions) {
-        memcpy(stencil + offset, instr.buf, instr.length);
-        offset += instr.length;
-    }
-    return stencil;
-}
-
 OneTestResult Harness::runTest(TestValues const& values, const void* thunk) {
     RegisterBank inputBank;
     // Set register bank
@@ -290,7 +258,7 @@ OneTestResult Harness::runTest(TestValues const& values, const void* thunk) {
     }
  
     auto requests = generateHarness(registers, thunk);
-    auto compiledHarness = compileHarness(requests);
+    auto compiledHarness = TestCompiler::compileRequests(requests);
     ((void(*)(void))compiledHarness)(); // Execute harness
 
     for (xed_reg_enum_t reg : TestCompiler::ymmRegs) {

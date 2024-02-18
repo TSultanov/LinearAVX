@@ -11,6 +11,12 @@ add_executable(tests
     Tests.cpp
     TestCompiler.cpp
     Harness.cpp
+    ../memmanager.cpp
+    ../Compiler/Compiler.cpp
+    ../Instructions/Instruction.cpp
+    ../Instructions/Operand.cpp
+    ../utils.c
+    ../printinstr.c
     )
 target_include_directories(tests PRIVATE ../../xed/kits/xed/include)
 target_link_directories(tests PRIVATE ../../xed/kits/xed/lib)

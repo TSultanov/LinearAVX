@@ -2,7 +2,6 @@
 #include "xed/xed-decoded-inst-api.h"
 #include "xed/xed-operand-enum.h"
 #include "xed/xed-reg-enum.h"
-#include <_types/_uint64_t.h>
 #include <cstdio>
 #include <vector>
 
