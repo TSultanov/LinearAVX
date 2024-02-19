@@ -8,6 +8,7 @@
 #include "xed/xed-reg-class-enum.h"
 #include "xed/xed-reg-enum.h"
 #include <climits>
+#include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <immintrin.h>
@@ -15,50 +16,37 @@
 #include <xmmintrin.h>
 #include <ucontext.h>
 
-uint64_t* ThunkRegisters::getGprTempPtr(xed_reg_enum_t reg) {
-    if (gpMap.contains(reg)) {
-        return &gpRegsValuesTemp[gpMap[reg]];
+ThunkRegisters::ThunkRegisters() {
+    for(size_t i = 0; i < 16; i++) {
+        gpRegsValuesTemp[i] = 0xdeadf00dcafe1234;
+        gpRegsValuesInOut[i] = 0xdeadf00dcafe1234;
     }
 
-    gpRegsValuesTemp.push_back(0);
-    gpRegsValuesInOut.push_back(0);
-    gpMap[reg] = gpRegsValuesTemp.size() - 1;
-    return &gpRegsValuesTemp[gpMap[reg]];
+    for(size_t i = 0; i < 16; i++) {
+        const auto init = _mm256_set1_epi64x(0xdeadf00dcafe1234);
+        ymmRegsValuesTemp[i] = init;
+        ymmRegsValuesInOut[i] = init;
+    }
 }
 
-uint64_t* ThunkRegisters::getGprInOutPtr(xed_reg_enum_t reg) {
-    if (ymmMap.contains(reg)) {
-        return &gpRegsValuesInOut[gpMap[reg]];
-    }
-
-    gpRegsValuesTemp.push_back(0);
-    gpRegsValuesInOut.push_back(0);
-    ymmMap[reg] = gpRegsValuesTemp.size() - 1;
-    return &gpRegsValuesInOut[ymmMap[reg]];
+volatile uint64_t* ThunkRegisters::getGprTempPtr(xed_reg_enum_t reg) volatile {
+    size_t idx = reg - XED_REG_RAX;
+    return gpRegsValuesTemp + idx;
 }
 
-__m256* ThunkRegisters::getYmmTempPtr(xed_reg_enum_t reg) {
-    if (ymmMap.contains(reg)) {
-        return &ymmRegsValuesTemp[ymmMap[reg]];
-    }
-
-    const auto zero = _mm256_set1_epi8(0);
-    ymmRegsValuesTemp.push_back(zero);
-    ymmRegsValuesInOut.push_back(zero);
-    ymmMap[reg] = gpRegsValuesTemp.size() - 1;
-    return &ymmRegsValuesTemp[ymmMap[reg]];
+volatile uint64_t* ThunkRegisters::getGprInOutPtr(xed_reg_enum_t reg) volatile {
+    size_t idx = reg - XED_REG_RAX;
+    return gpRegsValuesInOut + idx;
 }
 
-__m256* ThunkRegisters::getYmmInOutPtr(xed_reg_enum_t reg) {
-    if (ymmMap.contains(reg)) {
-        return &ymmRegsValuesInOut[ymmMap[reg]];
-    }
+volatile __m256* ThunkRegisters::getYmmTempPtr(xed_reg_enum_t reg) volatile {
+    size_t idx = reg - XED_REG_YMM0;
+    return ymmRegsValuesTemp + idx;
+}
 
-    const auto zero = _mm256_set1_epi8(0);
-    ymmRegsValuesTemp.push_back(zero);
-    ymmRegsValuesInOut.push_back(zero);
-    ymmMap[reg] = gpRegsValuesTemp.size() - 1;
-    return &ymmRegsValuesInOut[ymmMap[reg]];
+volatile __m256* ThunkRegisters::getYmmInOutPtr(xed_reg_enum_t reg) volatile {
+    size_t idx = reg - XED_REG_YMM0;
+    return ymmRegsValuesInOut + idx;
 }
 
 TestResult Harness::runTests() {
@@ -129,7 +117,7 @@ xed_encoder_request_t inst2(xed_iclass_enum_t iclass, xed_bits_t vl, xed_uint_t 
     return req;
 }
 
-std::vector<xed_encoder_request_t> generateHarness(ThunkRegisters & registers, const void* thunk)
+std::vector<xed_encoder_request_t> generateHarness(volatile ThunkRegisters & registers, const void* thunk)
 {
     std::vector<xed_encoder_request_t> requests;
     // Generate instructions to save registers
@@ -137,7 +125,7 @@ std::vector<xed_encoder_request_t> generateHarness(ThunkRegisters & registers, c
     for (xed_reg_enum_t reg : TestCompiler::ymmRegs) {
         uint64_t memoryAddress = (uint64_t)registers.getYmmTempPtr(reg);
         requests.push_back(inst2(XED_ICLASS_MOV, 0, 64, xed_reg(XED_REG_RAX), xed_imm0(memoryAddress, 64)));
-        requests.push_back(inst2(XED_ICLASS_VMOVUPS, 256, 0, xed_mem_b(XED_REG_RAX, 64), xed_reg(reg)));
+        requests.push_back(inst2(XED_ICLASS_VMOVUPS, 1, 0, xed_mem_b(XED_REG_RAX, 256), xed_reg(reg)));
     }
 
     // Next, save all GPRs (except RAX)
@@ -153,7 +141,7 @@ std::vector<xed_encoder_request_t> generateHarness(ThunkRegisters & registers, c
     for (xed_reg_enum_t reg : TestCompiler::ymmRegs) {
         uint64_t memoryAddress = (uint64_t)registers.getYmmInOutPtr(reg);
         requests.push_back(inst2(XED_ICLASS_MOV, 0, 64, xed_reg(XED_REG_RAX), xed_imm0(memoryAddress, 64)));
-        requests.push_back(inst2(XED_ICLASS_VMOVUPS, 256, 0, xed_reg(reg), xed_mem_b(XED_REG_RAX, 64)));
+        requests.push_back(inst2(XED_ICLASS_VMOVUPS, 1, 0, xed_reg(reg), xed_mem_b(XED_REG_RAX, 256)));
     }
 
     // Next, load all GPRs (except RAX)
@@ -173,7 +161,7 @@ std::vector<xed_encoder_request_t> generateHarness(ThunkRegisters & registers, c
     for (xed_reg_enum_t reg : TestCompiler::ymmRegs) {
         uint64_t memoryAddress = (uint64_t)registers.getYmmInOutPtr(reg);
         requests.push_back(inst2(XED_ICLASS_MOV, 0, 64, xed_reg(XED_REG_RAX), xed_imm0(memoryAddress, 64)));
-        requests.push_back(inst2(XED_ICLASS_VMOVUPS, 256, 0, xed_mem_b(XED_REG_RAX, 64), xed_reg(reg)));
+        requests.push_back(inst2(XED_ICLASS_VMOVUPS, 1, 0, xed_mem_b(XED_REG_RAX, 256), xed_reg(reg)));
     }
 
     // Next, save all GPRs (except RAX)
@@ -189,7 +177,7 @@ std::vector<xed_encoder_request_t> generateHarness(ThunkRegisters & registers, c
     for (xed_reg_enum_t reg : TestCompiler::ymmRegs) {
         uint64_t memoryAddress = (uint64_t)registers.getYmmTempPtr(reg);
         requests.push_back(inst2(XED_ICLASS_MOV, 0, 64, xed_reg(XED_REG_RAX), xed_imm0(memoryAddress, 64)));
-        requests.push_back(inst2(XED_ICLASS_VMOVUPS, 256, 0, xed_reg(reg), xed_mem_b(XED_REG_RAX, 64)));
+        requests.push_back(inst2(XED_ICLASS_VMOVUPS, 1, 0, xed_reg(reg), xed_mem_b(XED_REG_RAX, 256)));
     }
 
     // Next, load all GPRs (except RAX)
@@ -223,6 +211,7 @@ OneTestResult Harness::runTest(TestValues const& values, const void* thunk) {
             case XED_REG_CLASS_XMM:
             {
                 inputBank.ymmRegs[xmmToYmm(reg.reg)] = m128tm256(reg.v.value128);
+                break;
             }
             default:
             {
@@ -235,13 +224,14 @@ OneTestResult Harness::runTest(TestValues const& values, const void* thunk) {
     for (int i = 0; i < values.mem.size(); i++) {
         testThunk.usedMemory.memory[i] = values.mem[i];
     }
+    inputBank.gpRegs[testThunk.usedMemory.baseReg] = (uint64_t)testThunk.usedMemory.memory.data();
 
     // this is the core of the harness
     // here we will switch context to the actuall function implementation
 
     RegisterBank outputBank;
 
-    ThunkRegisters registers;
+    volatile ThunkRegisters registers;
     for (xed_reg_enum_t reg : TestCompiler::ymmRegs) {
         if (inputBank.ymmRegs.contains(reg)) {
             *(registers.getYmmInOutPtr(reg)) = inputBank.ymmRegs[reg];
@@ -251,7 +241,8 @@ OneTestResult Harness::runTest(TestValues const& values, const void* thunk) {
     }
     for (xed_reg_enum_t reg : TestCompiler::gpRegs) {
         if (inputBank.gpRegs.contains(reg)) {
-            *(registers.getGprInOutPtr(reg)) = inputBank.gpRegs[reg];
+            auto temp = inputBank.gpRegs[reg];
+            *(registers.getGprInOutPtr(reg)) = temp;
         } else {
             *(registers.getGprInOutPtr(reg)) = 0;
         }
@@ -274,7 +265,7 @@ OneTestResult Harness::runTest(TestValues const& values, const void* thunk) {
 
     MemoryValue memResult;
     for (int i = 0; i < values.mem.size(); i++) {
-        memResult[i] = testThunk.usedMemory.memory[i];
+        memResult.push_back(testThunk.usedMemory.memory[i]);
     }
     RegValues regResult;
     for (auto const& reg : values.reg) {
@@ -365,6 +356,146 @@ RegValue Harness::generateRegValue(xed_reg_enum_t reg) const {
         default:
         {
             printf("Harness::generateRegValue(): Unsupported reg class %s\n", xed_reg_class_enum_t2str(regClass));
+            exit(1);
+        }
+    }
+}
+
+void TestResult::printResult() const {
+    // Sanity check - compare inputs
+    if (nativeResult.input.reg.size() != translatedResult.input.reg.size()) {
+        printf("BUG: native and translated inputs have different size\n");
+        exit(1);
+    }
+    for(int i = 0; i < nativeResult.input.reg.size(); i++) {
+        auto nativeReg = nativeResult.input.reg[i];
+        auto translatedReg = translatedResult.input.reg[i];
+        if (nativeReg.reg != translatedReg.reg) {
+            printf("BUG: native and translated registers don't match\n");
+            exit(1);
+        }
+        switch (nativeReg.regClass) {
+            case XED_REG_CLASS_GPR:
+            case XED_REG_CLASS_GPR64:
+            {
+                if (nativeReg.v.value64 != translatedReg.v.value64) {
+                    printf("BUG: native and translated register value don't match\n");
+                    exit(1);
+                }
+                break;
+            }
+            case XED_REG_CLASS_XMM:
+            {
+                uint64_t one[2] __attribute__((aligned(16)));
+                _mm_store_si128((__m128i*)one, nativeReg.v.value128);
+                uint64_t two[2] __attribute__((aligned(16)));
+                _mm_store_si128((__m128i*)two, translatedReg.v.value128);
+                for (int i = 0; i < 2; i++) {
+                    if (one[i] != two[i]) {
+                        printf("BUG: native and translated register values don't match\n");
+                        exit(1);
+                    }
+                }
+                break;
+            }
+            case XED_REG_CLASS_YMM:
+            {
+                uint64_t one[4] __attribute__((aligned(32)));
+                _mm256_store_si256((__m256i*)&one, nativeReg.v.value256);
+                uint64_t two[4] __attribute__((aligned(32)));
+                _mm256_store_si256((__m256i*)&two, translatedReg.v.value256);
+                for (int i = 0; i < 4; i++) {
+                    if (one[i] != two[i]) {
+                        printf("BUG: native and translated register values don't match\n");
+                        exit(1);
+                    }
+                }
+                break;
+            }
+            default:
+            {
+                printf("Unsupported register class: %s\n", xed_reg_class_enum_t2str(nativeReg.regClass));
+                exit(1);
+            }
+        }
+    }
+    for (int i = 0; i < nativeResult.input.mem.size(); i++) {
+        if (nativeResult.input.mem[i] != translatedResult.input.mem[i]) {
+            printf("BUG: native and translated input memory doesn't match\n");
+            exit(1);
+        }
+    }
+
+    // Find discrepancies in output
+    if (nativeResult.output.reg.size() != translatedResult.output.reg.size()) {
+        printf("BUG: native and translated outputs have different size\n");
+        exit(1);
+    }
+    for(int i = 0; i < nativeResult.output.reg.size(); i++) {
+        auto nativeReg = nativeResult.output.reg[i];
+        auto translatedReg = translatedResult.output.reg[i];
+        if (nativeReg.reg != translatedReg.reg) {
+            printf("BUG: native and translated registers don't match\n");
+        }
+        switch (nativeReg.regClass) {
+            case XED_REG_CLASS_GPR:
+            case XED_REG_CLASS_GPR64:
+            {
+                if (nativeReg.v.value64 != translatedReg.v.value64) {
+                    printf("Register %s\n", xed_reg_enum_t2str(nativeReg.reg));
+                    printf("Native: %lx\n", nativeReg.v.value64);
+                    printf("Transl: %lx\n", translatedReg.v.value64);
+                }
+                break;
+            }
+            case XED_REG_CLASS_XMM:
+            {
+                uint64_t one[2] __attribute__((aligned(16)));
+                _mm_store_si128((__m128i*)one, nativeReg.v.value128);
+                uint64_t two[2] __attribute__((aligned(16)));
+                _mm_store_si128((__m128i*)two, translatedReg.v.value128);
+                bool different = false;
+                for (int i = 0; i < 2; i++) {
+                    if (one[i] != two[i]) {
+                        different = true;
+                    }
+                }
+                if (different) {
+                    printf("Register %s\n", xed_reg_enum_t2str(nativeReg.reg));
+                    printf("Native: %lx-%lx\n", one[1], one[0]);
+                    printf("Transl: %lx-%lx\n", two[1], two[0]);
+                }
+                break;
+            }
+            case XED_REG_CLASS_YMM:
+            {
+                uint64_t one[4] __attribute__((aligned(32)));
+                _mm256_store_si256((__m256i*)&one, nativeReg.v.value256);
+                uint64_t two[4] __attribute__((aligned(32)));
+                _mm256_store_si256((__m256i*)&two, translatedReg.v.value256);
+                bool different = false;
+                for (int i = 0; i < 4; i++) {
+                    if (one[i] != two[i]) {
+                        different = true;
+                    }
+                }
+                if (different) {
+                    printf("Register %s\n", xed_reg_enum_t2str(nativeReg.reg));
+                    printf("Native: %lx-%lx-%lx-%lx\n", one[3], one[2], one[1], one[0]);
+                    printf("Transl: %lx-%lx-%lx-%lx\n", two[3], two[2], two[1], two[0]);
+                }
+                break;
+            }
+            default:
+            {
+                printf("Unsupported register class: %s\n", xed_reg_class_enum_t2str(nativeReg.regClass));
+                exit(1);
+            }
+        }
+    }
+    for (int i = 0; i < nativeResult.input.mem.size(); i++) {
+        if (nativeResult.input.mem[i] != translatedResult.input.mem[i]) {
+            printf("BUG: native and translated input memory doesn't match\n");
             exit(1);
         }
     }

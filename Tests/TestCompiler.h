@@ -48,30 +48,36 @@ struct TempMemory {
 };
 
 struct ThunkRequest {
-    ThunkRequest(std::unordered_set<xed_reg_enum_t> const& usedRegisters,
-    TempMemory const& usedMemory,
-    xed_encoder_request_t instructionRequest)
-    : usedRegisters(usedRegisters)
+    ThunkRequest(xed_iclass_enum_t iclass,
+        std::unordered_set<xed_reg_enum_t> const& usedRegisters,
+        TempMemory const& usedMemory,
+        xed_encoder_request_t instructionRequest)
+    : iclass(iclass)
+    , usedRegisters(usedRegisters)
     , usedMemory(usedMemory)
     , instructionRequest(instructionRequest)
     {}
 
+    const xed_iclass_enum_t iclass;
     const std::unordered_set<xed_reg_enum_t> usedRegisters;
     const TempMemory usedMemory;
     const xed_encoder_request_t instructionRequest;
 };
 
 struct TestThunk {
-    TestThunk(std::unordered_set<xed_reg_enum_t> const& usedRegisters,
-    TempMemory const& usedMemory,
-    const void* compiledNativeThunk,
-    const void* compiledTranslatedThunk)
-    : usedRegisters(usedRegisters)
+    TestThunk(xed_iform_enum_t iform,
+        std::unordered_set<xed_reg_enum_t> const& usedRegisters,
+        TempMemory const& usedMemory,
+        const void* compiledNativeThunk,
+        const void* compiledTranslatedThunk)
+    : iform(iform)
+    , usedRegisters(usedRegisters)
     , usedMemory(usedMemory)
     , compiledNativeThunk(compiledNativeThunk)
     , compiledTranslatedThunk(compiledTranslatedThunk)
     {}
 
+    const xed_iform_enum_t iform;
     const std::unordered_set<xed_reg_enum_t> usedRegisters;
     TempMemory usedMemory;
     const void* compiledNativeThunk;

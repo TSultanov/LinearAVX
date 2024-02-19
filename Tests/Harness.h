@@ -2,6 +2,7 @@
 #include "TestCompiler.h"
 #include "xed/xed-reg-class-enum.h"
 #include "xed/xed-reg-enum.h"
+#include <cstddef>
 #include <emmintrin.h>
 #include <unordered_map>
 #include <vector>
@@ -9,17 +10,16 @@
 #include <immintrin.h>
 
 class ThunkRegisters {
-    std::vector<uint64_t> gpRegsValuesTemp;
-    std::vector<__m256> ymmRegsValuesTemp;
-    std::vector<uint64_t> gpRegsValuesInOut;
-    std::vector<__m256> ymmRegsValuesInOut;
-    std::unordered_map<xed_reg_enum_t, size_t> gpMap;
-    std::unordered_map<xed_reg_enum_t, size_t> ymmMap;
+    volatile uint64_t gpRegsValuesTemp[16];
+    volatile __m256 ymmRegsValuesTemp[16] __attribute__((aligned(32)));
+    volatile uint64_t gpRegsValuesInOut[16];
+    volatile __m256 ymmRegsValuesInOut[16] __attribute__((aligned(32)));
 public:
-    uint64_t* getGprTempPtr(xed_reg_enum_t reg);
-    __m256* getYmmTempPtr(xed_reg_enum_t reg);
-    uint64_t* getGprInOutPtr(xed_reg_enum_t reg);
-    __m256* getYmmInOutPtr(xed_reg_enum_t reg);
+    ThunkRegisters();
+    volatile uint64_t* getGprTempPtr(xed_reg_enum_t reg) volatile;
+    volatile __m256* getYmmTempPtr(xed_reg_enum_t reg) volatile;
+    volatile uint64_t* getGprInOutPtr(xed_reg_enum_t reg) volatile;
+    volatile __m256* getYmmInOutPtr(xed_reg_enum_t reg) volatile;
 };
 
 union RegValueUnion {
@@ -70,6 +70,8 @@ struct TestResult {
 
     OneTestResult nativeResult;
     OneTestResult translatedResult;
+
+    void printResult() const;
 };
 
 struct RegisterBank {
@@ -79,7 +81,7 @@ struct RegisterBank {
         }
 
         for(uint32_t reg = XED_REG_YMM0; reg <= XED_REG_YMM15; reg++) {
-            gpRegs[(xed_reg_enum_t)reg] = 0;
+            ymmRegs[(xed_reg_enum_t)reg] = _mm256_set1_ps(0);
         }
     }
 
