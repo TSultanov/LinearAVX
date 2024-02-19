@@ -71,7 +71,7 @@ struct TestResult {
     OneTestResult nativeResult;
     OneTestResult translatedResult;
 
-    void printResult() const;
+    bool printResult() const;
 };
 
 struct RegisterBank {

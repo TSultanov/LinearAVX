@@ -398,7 +398,7 @@ RegValue Harness::generateRegValue(xed_reg_enum_t reg) const {
     }
 }
 
-void TestResult::printResult() const {
+bool TestResult::printResult() const {
     // Sanity check - compare inputs
     if (nativeResult.input.reg.size() != translatedResult.input.reg.size()) {
         printf("BUG: native and translated inputs have different size\n");
@@ -463,6 +463,8 @@ void TestResult::printResult() const {
         }
     }
 
+    bool ret = false;
+
     // Find discrepancies in output
     if (nativeResult.output.reg.size() != translatedResult.output.reg.size()) {
         printf("BUG: native and translated outputs have different size\n");
@@ -482,6 +484,7 @@ void TestResult::printResult() const {
                     printf("Register %s\n", xed_reg_enum_t2str(nativeReg.reg));
                     printf("Native: %016lx\n", nativeReg.v.value64);
                     printf("Transl: %016lx\n", translatedReg.v.value64);
+                    ret = true;
                 }
                 break;
             }
@@ -501,6 +504,7 @@ void TestResult::printResult() const {
                     printf("Register %s\n", xed_reg_enum_t2str(nativeReg.reg));
                     printf("Native: %016lx-%016lx\n", one[1], one[0]);
                     printf("Transl: %016lx-%016lx\n", two[1], two[0]);
+                    ret = true;
                 }
                 break;
             }
@@ -520,6 +524,7 @@ void TestResult::printResult() const {
                     printf("Register %s\n", xed_reg_enum_t2str(nativeReg.reg));
                     printf("Native: %016lx-%016lx-%016lx-%016lx\n", one[3], one[2], one[1], one[0]);
                     printf("Transl: %016lx-%016lx-%016lx-%016lx\n", two[3], two[2], two[1], two[0]);
+                    ret = true;
                 }
                 break;
             }
@@ -530,10 +535,25 @@ void TestResult::printResult() const {
             }
         }
     }
-    for (int i = 0; i < nativeResult.input.mem.size(); i++) {
-        if (nativeResult.input.mem[i] != translatedResult.input.mem[i]) {
-            printf("BUG: native and translated input memory doesn't match\n");
-            exit(1);
+    bool memoryDifferent;
+    for (int i = 0; i < nativeResult.output.mem.size(); i++) {
+        if (nativeResult.output.mem[i] != translatedResult.output.mem[i]) {
+            memoryDifferent = true;
         }
     }
+    if (memoryDifferent) {
+        printf("Memory\n");
+        printf("Native:");
+        for (auto b : nativeResult.output.mem) {
+            printf(" %02x", b);
+        }
+        printf("\n");
+        printf("Transl:");
+        for (auto b : translatedResult.output.mem) {
+            printf(" %02x", b);
+        }
+        ret = true;
+    }
+
+    return ret;
 }

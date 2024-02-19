@@ -5,6 +5,7 @@
 class VPEXTRW : public CompilableInstruction<VPEXTRW> {
 public:
     VPEXTRW(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd) : CompilableInstruction(rip, ilen, xedd) {}
+    
 private:
     void implementation(bool upper, bool compile_inline) override {
         if (usesYmm()) {
