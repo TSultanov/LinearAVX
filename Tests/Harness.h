@@ -103,11 +103,11 @@ private:
     RegValues generateRegValues() const;
     MemoryValue generateMemValue() const;
     TestValues generateTestValues() const;
-    OneTestResult runTest(TestValues const& values, const void* thunk);
+    OneTestResult runTest(TestValues const& values, const void* thunk, bool translated);
     OneTestResult runNativeTest(TestValues const& values) {
-        return runTest(values, testThunk.compiledNativeThunk);
+        return runTest(values, testThunk.compiledNativeThunk, false);
     }
     OneTestResult runTranslatedTest(TestValues const& values) {
-        return runTest(values, testThunk.compiledTranslatedThunk);
+        return runTest(values, testThunk.compiledTranslatedThunk, true);
     }
 };

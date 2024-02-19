@@ -9,7 +9,7 @@ extern "C" {
 
 
 #include <emmintrin.h>
-__m128 *get_ymm_storage();
+volatile __m128 *get_ymm_storage();
 uint8_t* alloc_executable(uint64_t size);
 void jumptable_add_chunk(uint64_t location, void* chunk);
 void* jumptable_get_chunk(uint64_t location);

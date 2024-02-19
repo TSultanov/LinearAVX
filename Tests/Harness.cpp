@@ -12,9 +12,11 @@
 #include <cstdlib>
 #include <cstring>
 #include <immintrin.h>
+#include <mmintrin.h>
 #include <vector>
 #include <xmmintrin.h>
 #include <ucontext.h>
+#include "../memmanager.h"
 
 ThunkRegisters::ThunkRegisters() {
     for(size_t i = 0; i < 16; i++) {
@@ -192,8 +194,32 @@ std::vector<xed_encoder_request_t> generateHarness(volatile ThunkRegisters & reg
     return requests;
 }
 
-OneTestResult Harness::runTest(TestValues const& values, const void* thunk) {
+void storeHighYmm(xed_reg_enum_t reg, __m256 ymm) {
+    volatile __m128* ymmStorage = get_ymm_storage();
+    size_t idx = reg - XED_REG_YMM0;
+
+    double d[4] __attribute__((aligned(32)));
+
+    _mm256_store_pd(d, ymm);
+    ymmStorage[idx + 16] = _mm_set_pd(d[3], d[2]);
+}
+
+__m256 mergeHighYmmFromStorage(xed_reg_enum_t reg, __m256 ymm) {
+    volatile __m128* ymmStorage = get_ymm_storage();
+    size_t idx = reg - XED_REG_YMM0;
+
+    double d[4] __attribute__((aligned(32)));
+    _mm256_store_pd(d, ymm);
+
+    double s[2] __attribute__((aligned(16)));
+    _mm_store_pd(s, ymmStorage[idx + 16]);
+    
+    return _mm256_set_pd(s[1], s[0], d[1], d[0]);
+}
+
+OneTestResult Harness::runTest(TestValues const& values, const void* thunk, bool translated) {
     RegisterBank inputBank;
+
     // Set register bank
     for (auto const& reg : values.reg) {
         switch(reg.regClass) {
@@ -235,8 +261,15 @@ OneTestResult Harness::runTest(TestValues const& values, const void* thunk) {
     for (xed_reg_enum_t reg : TestCompiler::ymmRegs) {
         if (inputBank.ymmRegs.contains(reg)) {
             *(registers.getYmmInOutPtr(reg)) = inputBank.ymmRegs[reg];
+            if(translated) {
+                storeHighYmm(reg, inputBank.ymmRegs[reg]);
+            }
         } else {
-            *(registers.getYmmInOutPtr(reg)) = _mm256_set1_epi8(0);
+            auto zero = _mm256_set1_epi8(0);
+            *(registers.getYmmInOutPtr(reg)) = zero;
+            if(translated) {
+                storeHighYmm(reg, zero);
+            }
         }
     }
     for (xed_reg_enum_t reg : TestCompiler::gpRegs) {
@@ -254,7 +287,11 @@ OneTestResult Harness::runTest(TestValues const& values, const void* thunk) {
 
     for (xed_reg_enum_t reg : TestCompiler::ymmRegs) {
         if (outputBank.ymmRegs.contains(reg)) {
-            outputBank.ymmRegs[reg] = *(registers.getYmmInOutPtr(reg));
+            auto regValue = *(registers.getYmmInOutPtr(reg));
+            if(translated) {
+                regValue = mergeHighYmmFromStorage(reg, regValue);
+            }
+            outputBank.ymmRegs[reg] = regValue;
         }
     }
     for (xed_reg_enum_t reg : TestCompiler::gpRegs) {
@@ -443,17 +480,17 @@ void TestResult::printResult() const {
             {
                 if (nativeReg.v.value64 != translatedReg.v.value64) {
                     printf("Register %s\n", xed_reg_enum_t2str(nativeReg.reg));
-                    printf("Native: %lx\n", nativeReg.v.value64);
-                    printf("Transl: %lx\n", translatedReg.v.value64);
+                    printf("Native: %016lx\n", nativeReg.v.value64);
+                    printf("Transl: %016lx\n", translatedReg.v.value64);
                 }
                 break;
             }
             case XED_REG_CLASS_XMM:
             {
                 uint64_t one[2] __attribute__((aligned(16)));
-                _mm_store_si128((__m128i*)one, nativeReg.v.value128);
+                _mm_store_pd((double*)one, nativeReg.v.value128);
                 uint64_t two[2] __attribute__((aligned(16)));
-                _mm_store_si128((__m128i*)two, translatedReg.v.value128);
+                _mm_store_pd((double*)two, translatedReg.v.value128);
                 bool different = false;
                 for (int i = 0; i < 2; i++) {
                     if (one[i] != two[i]) {
@@ -462,17 +499,17 @@ void TestResult::printResult() const {
                 }
                 if (different) {
                     printf("Register %s\n", xed_reg_enum_t2str(nativeReg.reg));
-                    printf("Native: %lx-%lx\n", one[1], one[0]);
-                    printf("Transl: %lx-%lx\n", two[1], two[0]);
+                    printf("Native: %016lx-%016lx\n", one[1], one[0]);
+                    printf("Transl: %016lx-%016lx\n", two[1], two[0]);
                 }
                 break;
             }
             case XED_REG_CLASS_YMM:
             {
                 uint64_t one[4] __attribute__((aligned(32)));
-                _mm256_store_si256((__m256i*)&one, nativeReg.v.value256);
+                _mm256_store_pd((double*)&one, nativeReg.v.value256);
                 uint64_t two[4] __attribute__((aligned(32)));
-                _mm256_store_si256((__m256i*)&two, translatedReg.v.value256);
+                _mm256_store_pd((double*)&two, translatedReg.v.value256);
                 bool different = false;
                 for (int i = 0; i < 4; i++) {
                     if (one[i] != two[i]) {
@@ -481,8 +518,8 @@ void TestResult::printResult() const {
                 }
                 if (different) {
                     printf("Register %s\n", xed_reg_enum_t2str(nativeReg.reg));
-                    printf("Native: %lx-%lx-%lx-%lx\n", one[3], one[2], one[1], one[0]);
-                    printf("Transl: %lx-%lx-%lx-%lx\n", two[3], two[2], two[1], two[0]);
+                    printf("Native: %016lx-%016lx-%016lx-%016lx\n", one[3], one[2], one[1], one[0]);
+                    printf("Transl: %016lx-%016lx-%016lx-%016lx\n", two[3], two[2], two[1], two[0]);
                 }
                 break;
             }
