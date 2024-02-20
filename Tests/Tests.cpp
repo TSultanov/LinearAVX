@@ -16,13 +16,13 @@ InstructionMetadata tests[] = {
     VSQRTPD::Metadata,
     VUNPCKHPS::Metadata,
     VUNPCKLPS::Metadata,
-    VUCOMISS::Metadata, // TODO: fix compilation, test EFLAGS
-    VUCOMISD::Metadata, // TODO: fix compilation, test EFLAGS
-    // VSHUFPS::Metadata, // TODO: immediate support
-    // VSHUFPD::Metadata, // TODO: immediate support
+    VUCOMISS::Metadata,
+    VUCOMISD::Metadata,
+    VSHUFPS::Metadata,
+    VSHUFPD::Metadata,
     VPXOR::Metadata,
     VPSLLQ::Metadata,
-    // VPERMILPS::Metadata, // TODO: immediate support
+    VPERMILPS::Metadata,
     VPCMPEQQ::Metadata,
     VMULSS::Metadata,
     VMULSD::Metadata,

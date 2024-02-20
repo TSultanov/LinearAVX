@@ -138,6 +138,10 @@ ThunkRequest TestCompiler::generateInstruction(OperandsMetadata const& om) const
                 }
                 return std::nullopt;
             }
+            case XED_ENCODER_OPERAND_TYPE_IMM0:
+            {
+                return xed_imm0(std::rand() & 0xff, o.immBits);
+            }
             default:
             {
                 printf("Unsupported operand type\n");
@@ -191,6 +195,35 @@ ThunkRequest TestCompiler::generateInstruction(OperandsMetadata const& om) const
             exit(1);
         }
         xed_inst3(&enc_inst, dstate, metadata.iclass, eow, *op1, *op2, *op3);
+    }
+
+    if (om.operands.size() == 4) {
+        auto op1 = getOperand(om.operands[0]);
+        if (!op1.has_value()) {
+            printf("Failed to generated instruction.\n");
+            exit(1);
+        }
+        auto op2 = getOperand(om.operands[1]);
+        if (!op2.has_value()) {
+            printf("Failed to generated instruction.\n");
+            exit(1);
+        }
+        auto op3 = getOperand(om.operands[2]);
+        if (!op3.has_value()) {
+            printf("Failed to generated instruction.\n");
+            exit(1);
+        }
+        auto op4 = getOperand(om.operands[3]);
+        if (!op4.has_value()) {
+            printf("Failed to generated instruction.\n");
+            exit(1);
+        }
+        xed_inst4(&enc_inst, dstate, metadata.iclass, eow, *op1, *op2, *op3, *op4);
+    }
+
+    if (om.operands.size() > 4) {
+        printf("Unsupported number of operands: %zu\n", om.operands.size());
+        exit(1);
     }
 
     xed_convert_to_encoder_request(&req, &enc_inst);

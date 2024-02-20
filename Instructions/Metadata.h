@@ -20,6 +20,7 @@ extern "C" {
 struct OperandMetadata {
     const xed_encoder_operand_type_t operand;
     const xed_reg_class_enum_t regClass;
+    const xed_uint_t immBits;
 };
 
 struct OperandsMetadata {
