@@ -14,17 +14,19 @@ class ThunkRegisters {
     volatile __m256 ymmRegsValuesTemp[16] __attribute__((aligned(32)));
     volatile uint64_t gpRegsValuesInOut[16];
     volatile __m256 ymmRegsValuesInOut[16] __attribute__((aligned(32)));
+    volatile uint64_t rflags;
 public:
     ThunkRegisters();
     volatile uint64_t* getGprTempPtr(xed_reg_enum_t reg) volatile;
     volatile __m256* getYmmTempPtr(xed_reg_enum_t reg) volatile;
     volatile uint64_t* getGprInOutPtr(xed_reg_enum_t reg) volatile;
     volatile __m256* getYmmInOutPtr(xed_reg_enum_t reg) volatile;
+    volatile uint64_t* getRflags() volatile;
 };
 
 union RegValueUnion {
     uint64_t value64;
-    __m128 value128;
+    // __m128 value128;
     __m256 value256;
 };
 
@@ -85,6 +87,7 @@ struct RegisterBank {
         }
     }
 
+    uint64_t rflags = 0;
     std::unordered_map<xed_reg_enum_t, uint64_t> gpRegs;
     std::unordered_map<xed_reg_enum_t, __m256> ymmRegs;
 };

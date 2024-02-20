@@ -51,6 +51,10 @@ volatile __m256* ThunkRegisters::getYmmInOutPtr(xed_reg_enum_t reg) volatile {
     return ymmRegsValuesInOut + idx;
 }
 
+volatile uint64_t* ThunkRegisters::getRflags() volatile {
+    return &rflags;
+}
+
 TestResult Harness::runTests() {
     auto testValues = generateTestValues();
     auto nativeResult = runNativeTest(testValues);
@@ -174,6 +178,18 @@ std::vector<xed_encoder_request_t> generateHarness(volatile ThunkRegisters & reg
         requests.push_back(inst2(XED_ICLASS_MOV, 0, 64, xed_mem_b(XED_REG_RAX, 64), xed_reg(reg)));
     }
 
+    // Save EFLAGS
+    {
+        requests.push_back(inst1(XED_ICLASS_PUSH, 64, xed_reg(XED_REG_RBX)));
+        requests.push_back(inst0(XED_ICLASS_PUSHFQ, 64));
+        requests.push_back(inst1(XED_ICLASS_POP, 64, xed_reg(XED_REG_RBX)));
+
+        uint64_t memoryAddress = (uint64_t)registers.getRflags();
+        requests.push_back(inst2(XED_ICLASS_MOV, 0, 64, xed_reg(XED_REG_RAX), xed_imm0(memoryAddress, 64)));
+        requests.push_back(inst2(XED_ICLASS_MOV, 0, 64, xed_mem_b(XED_REG_RAX, 64), xed_reg(XED_REG_RBX)));
+        requests.push_back(inst1(XED_ICLASS_POP, 64, xed_reg(XED_REG_RBX)));
+    }
+
     // Restore registers
     // First load all YMM registers
     for (xed_reg_enum_t reg : TestCompiler::ymmRegs) {
@@ -219,7 +235,6 @@ __m256 mergeHighYmmFromStorage(xed_reg_enum_t reg, __m256 ymm) {
 
 OneTestResult Harness::runTest(TestValues const& values, const void* thunk, bool translated) {
     RegisterBank inputBank;
-
     // Set register bank
     for (auto const& reg : values.reg) {
         switch(reg.regClass) {
@@ -236,7 +251,7 @@ OneTestResult Harness::runTest(TestValues const& values, const void* thunk, bool
             }
             case XED_REG_CLASS_XMM:
             {
-                inputBank.ymmRegs[xmmToYmm(reg.reg)] = m128tm256(reg.v.value128);
+                inputBank.ymmRegs[xmmToYmm(reg.reg)] = reg.v.value256;//m128tm256(reg.v.value128);
                 break;
             }
             default:
@@ -250,7 +265,7 @@ OneTestResult Harness::runTest(TestValues const& values, const void* thunk, bool
     for (int i = 0; i < values.mem.size(); i++) {
         testThunk.usedMemory.memory[i] = values.mem[i];
     }
-    inputBank.gpRegs[testThunk.usedMemory.baseReg] = (uint64_t)testThunk.usedMemory.memory.data();
+    inputBank.gpRegs[testThunk.usedMemory.baseReg] = (uint64_t)testThunk.usedMemory.memory;
 
     // this is the core of the harness
     // here we will switch context to the actuall function implementation
@@ -299,6 +314,7 @@ OneTestResult Harness::runTest(TestValues const& values, const void* thunk, bool
             outputBank.gpRegs[reg] = *(registers.getGprInOutPtr(reg));
         }
     }
+    outputBank.rflags = *(registers.getRflags());
 
     MemoryValue memResult;
     for (int i = 0; i < values.mem.size(); i++) {
@@ -330,6 +346,7 @@ OneTestResult Harness::runTest(TestValues const& values, const void* thunk, bool
             }
         }
     }
+    regResult.emplace_back(RegValue(XED_REG_RFLAGS, {.value64 = outputBank.rflags}));
     return OneTestResult(values, TestValues(regResult, memResult));
 }
 
@@ -339,7 +356,7 @@ TestValues Harness::generateTestValues() const {
 
 MemoryValue Harness::generateMemValue() const {
     MemoryValue ret;
-    for (int i = 0; i < testThunk.usedMemory.memory.size(); i++) {
+    for (int i = 0; i < testThunk.usedMemory.size; i++) {
         ret.push_back(std::rand());
     }
     return ret;
@@ -357,16 +374,6 @@ RegValue Harness::generateRegValue(xed_reg_enum_t reg) const {
     auto regClass = xed_reg_class(reg);
     switch (regClass) {
         case XED_REG_CLASS_XMM:
-        {
-            const int vecLength = 4;
-            float randomValues[vecLength];
-            for (int i = 0; i < vecLength; i++) {
-                int randValue = std::rand();
-                randomValues[i] = *(float*)&randValue;
-            }
-            __m128 value = _mm_set_ps(randomValues[0], randomValues[1], randomValues[2], randomValues[3]);
-            return RegValue(reg, {.value128 = value});
-        }
         case XED_REG_CLASS_YMM:
         {
             const int vecLength = 8;
@@ -412,6 +419,10 @@ bool TestResult::printResult() const {
             exit(1);
         }
         switch (nativeReg.regClass) {
+            case XED_REG_CLASS_FLAGS:
+            {
+                continue;
+            }
             case XED_REG_CLASS_GPR:
             case XED_REG_CLASS_GPR64:
             {
@@ -422,19 +433,6 @@ bool TestResult::printResult() const {
                 break;
             }
             case XED_REG_CLASS_XMM:
-            {
-                uint64_t one[2] __attribute__((aligned(16)));
-                _mm_store_si128((__m128i*)one, nativeReg.v.value128);
-                uint64_t two[2] __attribute__((aligned(16)));
-                _mm_store_si128((__m128i*)two, translatedReg.v.value128);
-                for (int i = 0; i < 2; i++) {
-                    if (one[i] != two[i]) {
-                        printf("BUG: native and translated register values don't match\n");
-                        exit(1);
-                    }
-                }
-                break;
-            }
             case XED_REG_CLASS_YMM:
             {
                 uint64_t one[4] __attribute__((aligned(32)));
@@ -479,6 +477,7 @@ bool TestResult::printResult() const {
         switch (nativeReg.regClass) {
             case XED_REG_CLASS_GPR:
             case XED_REG_CLASS_GPR64:
+            case XED_REG_CLASS_FLAGS:
             {
                 if (nativeReg.v.value64 != translatedReg.v.value64) {
                     printf("Register %s\n", xed_reg_enum_t2str(nativeReg.reg));
@@ -489,25 +488,6 @@ bool TestResult::printResult() const {
                 break;
             }
             case XED_REG_CLASS_XMM:
-            {
-                uint64_t one[2] __attribute__((aligned(16)));
-                _mm_store_pd((double*)one, nativeReg.v.value128);
-                uint64_t two[2] __attribute__((aligned(16)));
-                _mm_store_pd((double*)two, translatedReg.v.value128);
-                bool different = false;
-                for (int i = 0; i < 2; i++) {
-                    if (one[i] != two[i]) {
-                        different = true;
-                    }
-                }
-                if (different) {
-                    printf("Register %s\n", xed_reg_enum_t2str(nativeReg.reg));
-                    printf("Native: %016lx-%016lx\n", one[1], one[0]);
-                    printf("Transl: %016lx-%016lx\n", two[1], two[0]);
-                    ret = true;
-                }
-                break;
-            }
             case XED_REG_CLASS_YMM:
             {
                 uint64_t one[4] __attribute__((aligned(32)));

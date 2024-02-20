@@ -38,13 +38,13 @@ inline xed_reg_enum_t ymmToXmm(xed_reg_enum_t reg) {
 }
 
 struct TempMemory {
-    TempMemory(xed_reg_enum_t baseReg, std::vector<uint8_t> const& memory)
+    TempMemory(xed_reg_enum_t baseReg)
     : baseReg(baseReg)
-    , memory(memory)
     {}
 
     const xed_reg_enum_t baseReg;
-    std::vector<uint8_t> memory;
+    const size_t size = 32;
+    uint8_t memory[32] __attribute__((aligned(32)));
 };
 
 struct ThunkRequest {
@@ -94,6 +94,7 @@ public:
     static void* compileRequests(std::vector<xed_encoder_request_t> requests);
 
     static const std::vector<xed_reg_enum_t> gpRegs;
+    static const std::vector<xed_reg_enum_t> gp32Regs;
     static const std::vector<xed_reg_enum_t> xmmRegs;
     static const std::vector<xed_reg_enum_t> ymmRegs;
 

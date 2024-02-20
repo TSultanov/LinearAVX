@@ -4,6 +4,7 @@
 class VINSERTPS : public CompilableInstruction<VINSERTPS> {
 public:
     VINSERTPS(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd) : CompilableInstruction(rip, ilen, xedd) {}
+    
 private:
     void implementation(bool upper, bool compile_inline) {
         if (operands[0].reg() == operands[1].reg() ) {

@@ -16,18 +16,37 @@ InstructionMetadata tests[] = {
     VSQRTPD::Metadata,
     VUNPCKHPS::Metadata,
     VUNPCKLPS::Metadata,
-    // VUCOMISS::Metadata, // TODO: fix compilation, test EFLAGS
-    // VUCOMISD::Metadata, // TODO: fix compilation, test EFLAGS
+    VUCOMISS::Metadata, // TODO: fix compilation, test EFLAGS
+    VUCOMISD::Metadata, // TODO: fix compilation, test EFLAGS
     // VSHUFPS::Metadata, // TODO: immediate support
     // VSHUFPD::Metadata, // TODO: immediate support
     VPXOR::Metadata,
     VPSLLQ::Metadata,
     // VPERMILPS::Metadata, // TODO: immediate support
     VPCMPEQQ::Metadata,
-    // VMULSS::Metadata, // TODO: compilation
-    // VMULSD::Metadata, // TODO: compilation
+    VMULSS::Metadata,
+    VMULSD::Metadata,
     VMULPS::Metadata,
     VMULPD::Metadata,
+    VMOVUPS::Metadata,
+    VMOVUPD::Metadata,
+    VMOVMSKPS::Metadata,
+    VMOVMSKPD::Metadata,
+    VMOVLHPS::Metadata,
+    VMOVDQU::Metadata,
+    VMOVDQA::Metadata,
+    VMOVAPS::Metadata,
+    VMOVAPD::Metadata,
+    VMINSS::Metadata,
+    VMINSD::Metadata,
+    VMAXSS::Metadata,
+    VMAXSD::Metadata,
+    VHADDPS::Metadata,
+    VHADDPD::Metadata,
+    VFMSUB231PS::Metadata,
+    VFMADD231PS::Metadata,
+    VDIVSS::Metadata,
+    VDIVSD::Metadata,
 };
 
 int main() {

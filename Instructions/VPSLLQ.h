@@ -50,17 +50,20 @@ public:
     };
 private:
     void implementation(bool upper, bool compile_inline) {
-        if (operands[0].reg() == operands[1].reg()) {
-            psllq(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
-        } else if (operands[0].reg() == operands[2].reg()) {
-            withPreserveXmmReg(operands[1], [=]() {
-                psllq(operands[1].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
-                movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
-            });
-        } else {
-            movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
-            psllq(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
-        }
+        map3opto2op(upper, [&](xed_encoder_operand_t const& op0, xed_encoder_operand_t const& op1) {
+            psllq(op0, op1);
+        });
+        // if (operands[0].reg() == operands[1].reg()) {
+        //     psllq(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
+        // } else if (operands[0].reg() == operands[2].reg()) {
+        //     withPreserveXmmReg(operands[1], [=]() {
+        //         psllq(operands[1].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
+        //         movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
+        //     });
+        // } else {
+        //     movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
+        //     psllq(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
+        // }
 
         if (operands[0].isXmm()) {
             zeroupperInternal(operands[0]);

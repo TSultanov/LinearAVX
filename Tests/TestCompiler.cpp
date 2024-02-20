@@ -30,6 +30,10 @@ const std::vector<xed_reg_enum_t> TestCompiler::gpRegs = {
     XED_REG_R10, XED_REG_R11, XED_REG_R12, XED_REG_R13, XED_REG_R14, XED_REG_R15
 };
 
+const std::vector<xed_reg_enum_t> TestCompiler::gp32Regs = {
+    XED_REG_EAX, XED_REG_EBX, XED_REG_ECX, XED_REG_EDX, XED_REG_ESI, XED_REG_EDI
+};
+
 const std::vector<xed_reg_enum_t> TestCompiler::xmmRegs = {
     XED_REG_XMM0, XED_REG_XMM1, XED_REG_XMM2, XED_REG_XMM3, XED_REG_XMM4, XED_REG_XMM5, XED_REG_XMM6, XED_REG_XMM7,
     XED_REG_XMM8, XED_REG_XMM9, XED_REG_XMM10, XED_REG_XMM11, XED_REG_XMM12, XED_REG_XMM13, XED_REG_XMM14,
@@ -55,6 +59,10 @@ std::vector<ThunkRequest> TestCompiler::generateInstructions() const {
     return ret;
 }
 
+xed_reg_enum_t r32tor64(xed_reg_enum_t reg) {
+    return (xed_reg_enum_t)(reg + (XED_REG_RAX - XED_REG_EAX));
+}
+
 ThunkRequest TestCompiler::generateInstruction(OperandsMetadata const& om) const {
     xed_encoder_request_t req;
     xed_encoder_instruction_t enc_inst;
@@ -63,12 +71,8 @@ ThunkRequest TestCompiler::generateInstruction(OperandsMetadata const& om) const
 
     std::unordered_set<xed_reg_enum_t> usedRegisters;
     usedRegisters.insert(XED_REG_RAX); //reserve RAX
+    usedRegisters.insert(XED_REG_RBX); //reserve RBX
     xed_reg_enum_t baseReg;
-    std::vector<uint8_t> memory;
-    memory.reserve(om.vectorLength / 8);
-    for (int i = 0; i < om.vectorLength / 8; i++) {
-        memory.push_back(0xff);
-    }
 
     auto getOperand = [&](OperandMetadata const& o) -> std::optional<xed_encoder_operand_t> {
         switch (o.operand) {
@@ -95,7 +99,19 @@ ThunkRequest TestCompiler::generateInstruction(OperandsMetadata const& om) const
 
                         return std::nullopt;
                     }
+                    case XED_REG_CLASS_GPR32:
+                    {
+                        for (auto reg : gp32Regs) {
+                            auto r64 = r32tor64(reg);
+                            if (usedRegisters.contains(r64)) continue;
+                            usedRegisters.insert(r64);
+                            return xed_reg(reg);
+                        }
+
+                        return std::nullopt;
+                    }
                     case XED_REG_CLASS_GPR:
+                    case XED_REG_CLASS_GPR64:
                     {
                         for (auto reg : gpRegs) {
                             if (usedRegisters.contains(reg)) continue;
@@ -130,13 +146,18 @@ ThunkRequest TestCompiler::generateInstruction(OperandsMetadata const& om) const
         }
     };
 
+    int eow = 0;
+    if (om.vectorLength < 128) {
+        eow = om.vectorLength;
+    }
+
     if (om.operands.size() == 1) {
         auto op = getOperand(om.operands[0]);
         if (!op.has_value()) {
             printf("Failed to generated instruction.\n");
             exit(1);
         }
-        xed_inst1(&enc_inst, dstate, metadata.iclass, 0, *op);
+        xed_inst1(&enc_inst, dstate, metadata.iclass, eow, *op);
     }
 
     if (om.operands.size() == 2) {
@@ -150,7 +171,7 @@ ThunkRequest TestCompiler::generateInstruction(OperandsMetadata const& om) const
             printf("Failed to generated instruction.\n");
             exit(1);
         }
-        xed_inst2(&enc_inst, dstate, metadata.iclass, 0, *op1, *op2);
+        xed_inst2(&enc_inst, dstate, metadata.iclass, eow, *op1, *op2);
     }
 
     if (om.operands.size() == 3) {
@@ -169,13 +190,15 @@ ThunkRequest TestCompiler::generateInstruction(OperandsMetadata const& om) const
             printf("Failed to generated instruction.\n");
             exit(1);
         }
-        xed_inst3(&enc_inst, dstate, metadata.iclass, 0, *op1, *op2, *op3);
+        xed_inst3(&enc_inst, dstate, metadata.iclass, eow, *op1, *op2, *op3);
     }
 
     xed_convert_to_encoder_request(&req, &enc_inst);
-    xed3_operand_set_vl(&req, om.vectorLength / 128 - 1);
+    if (om.vectorLength >= 128) {
+        xed3_operand_set_vl(&req, om.vectorLength / 128 - 1);
+    }
 
-    return ThunkRequest(metadata.iclass, usedRegisters, TempMemory(baseReg, memory), req);
+    return ThunkRequest(metadata.iclass, usedRegisters, TempMemory(baseReg), req);
 }
 
 void* TestCompiler::compileRequests(std::vector<xed_encoder_request_t> requests) {

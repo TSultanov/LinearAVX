@@ -295,7 +295,7 @@ void Instruction::mulpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
 }
 
 void Instruction::mulps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    op2(XED_ICLASS_MULPD, op0, op1);
+    op2(XED_ICLASS_MULPS, op0, op1);
 }
 
 void Instruction::pand(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
@@ -387,7 +387,7 @@ void Instruction::unpckhps(xed_encoder_operand_t op0, xed_encoder_operand_t op1)
 }
 
 void Instruction::unpcklps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    op2(XED_ICLASS_UNPCKHPS, op0, op1);
+    op2(XED_ICLASS_UNPCKLPS, op0, op1);
 }
 
 void Instruction::pcmpeqq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
