@@ -797,16 +797,6 @@ void Instruction::add(xed_reg_enum_t reg, int8_t immediate) {
 }
 
 void Instruction::withPreserveXmmReg(Operand const& op, std::function<void()> instr) {
-    if (op.isYmm()) {
-        debug_print("Preserving YMM is not supported yet\n");
-        exit(1);
-    }
-
-    if (!op.isXmm()) {
-        debug_print("Only XMM registers are supported\n");
-        exit(1);
-    }
-
     withPreserveXmmReg(op.toXmmReg(), instr);
 }
 

@@ -23,38 +23,27 @@ public:
                 { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_XMM },
                 { .operand = XED_ENCODER_OPERAND_TYPE_IMM0, .regClass = XED_REG_CLASS_INVALID, .immBits = 8 }}
             },
-            // { 
-            //     .vectorLength = 256,
-            //     .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
-            //     { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
-            //     { .operand = XED_ENCODER_OPERAND_TYPE_MEM, .regClass = XED_REG_CLASS_INVALID },
-            //     { .operand = XED_ENCODER_OPERAND_TYPE_IMM0, .regClass = XED_REG_CLASS_INVALID, .immBits = 8 }}
-            // },
-            // { 
-            //     .vectorLength = 256,
-            //     .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
-            //     { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
-            //     { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
-            //     { .operand = XED_ENCODER_OPERAND_TYPE_IMM0, .regClass = XED_REG_CLASS_INVALID, .immBits = 8 }}
-            // } // TODO: implement support
+            { 
+                .vectorLength = 256,
+                .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
+                { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
+                { .operand = XED_ENCODER_OPERAND_TYPE_MEM, .regClass = XED_REG_CLASS_INVALID },
+                { .operand = XED_ENCODER_OPERAND_TYPE_IMM0, .regClass = XED_REG_CLASS_INVALID, .immBits = 8 }}
+            },
+            { 
+                .vectorLength = 256,
+                .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
+                { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
+                { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
+                { .operand = XED_ENCODER_OPERAND_TYPE_IMM0, .regClass = XED_REG_CLASS_INVALID, .immBits = 8 }}
+            },
         }
     };
 private:
     void implementation(bool upper, bool compile_inline) {
-        if (operands[0].reg() == operands[1].reg()) {
-            shufps(
-                operands[0].toEncoderOperand(upper),
-                operands[1].toEncoderOperand(upper),
-                operands[3].toEncoderOperand(upper));
-        } else {
-            withPreserveXmmReg(operands[1], [=]() {
-                shufps(
-                    operands[1].toEncoderOperand(upper),
-                    operands[2].toEncoderOperand(upper),
-                    operands[3].toEncoderOperand(upper));
-                movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
-            });
-        }
+        map3opto2op(upper, [&](xed_encoder_operand_t const& op0, xed_encoder_operand_t const& op1) {
+            shufps(op0, op1, operands[3].toEncoderOperand(upper));
+        });
 
         if (operands[0].isXmm()) {
             zeroupperInternal(operands[0]);
