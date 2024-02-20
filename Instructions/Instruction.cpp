@@ -323,7 +323,7 @@ void Instruction::cvtsi2ss(xed_encoder_operand_t op0, xed_encoder_operand_t op1)
 }
 
 void Instruction::cvtsd2ss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
-    op2(XED_ICLASS_CVTSS2SD, op0, op1);
+    op2(XED_ICLASS_CVTSD2SS, op0, op1);
 }
 
 void Instruction::movq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {

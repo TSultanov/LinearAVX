@@ -6,6 +6,36 @@ public:
     SHLX(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd) : CompilableInstruction(rip, ilen, xedd) {
         usedRegs.insert(XED_REG_RCX);
     }
+
+    static const inline InstructionMetadata Metadata = {
+        .iclass = XED_ICLASS_SHLX,
+        .operandSets = {
+            { 
+                .vectorLength = 32,
+                .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 },
+                { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 },
+                { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 }}
+            },
+            // { 
+            //     .vectorLength = 32,
+            //     .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 },
+            //     { .operand = XED_ENCODER_OPERAND_TYPE_MEM, .regClass = XED_REG_CLASS_INVALID },
+            //     { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 }}
+            // },
+            { 
+                .vectorLength = 64,
+                .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR64 },
+                { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR64 },
+                { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR64 }}
+            },
+            // { 
+            //     .vectorLength = 64,
+            //     .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR64 },
+            //     { .operand = XED_ENCODER_OPERAND_TYPE_MEM, .regClass = XED_REG_CLASS_INVALID },
+            //     { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR64 }}
+            // },
+        }
+    };
 private:
     void implementation(bool upper, bool compile_inline) {
         withFreeReg([=](xed_reg_enum_t tempReg) {
@@ -16,7 +46,7 @@ private:
                 mov(xed_reg(tempReg), xed_reg(operands[1].to64BitRegister()));
             }
 
-            push(XED_REG_RCX);
+            push(XED_REG_RCX); // TODO: What if any of the registers in the original isntruction is RCX?
 
             mov(xed_reg(XED_REG_RCX), xed_reg(operands[2].to64BitRegister()));
 

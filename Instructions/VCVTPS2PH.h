@@ -15,6 +15,36 @@ class VCVTPS2PH : public CompilableInstruction<VCVTPS2PH> {
 public:
     VCVTPS2PH(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd) : CompilableInstruction(rip, ilen, xedd) {
     }
+
+    static const inline InstructionMetadata Metadata = {
+        .iclass = XED_ICLASS_VCVTPS2PH,
+        .operandSets = {
+            { 
+                .vectorLength = 128,
+                .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_XMM },
+                { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_XMM },
+                { .operand = XED_ENCODER_OPERAND_TYPE_IMM0, .regClass = XED_REG_CLASS_INVALID, .immBits = 8 }}
+            },
+            // { 
+            //     .vectorLength = 64,
+            //     .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_MEM, .regClass = XED_REG_CLASS_INVALID },
+            //     { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_XMM },
+            //     { .operand = XED_ENCODER_OPERAND_TYPE_IMM0, .regClass = XED_REG_CLASS_INVALID, .immBits = 8 }}
+            // },
+            // { 
+            //     .vectorLength = 256,
+            //     .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_XMM },
+            //     { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
+            //     { .operand = XED_ENCODER_OPERAND_TYPE_IMM0, .regClass = XED_REG_CLASS_INVALID, .immBits = 8 }}
+            // },
+            // { 
+            //     .vectorLength = 64,
+            //     .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_MEM, .regClass = XED_REG_CLASS_INVALID },
+            //     { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
+            //     { .operand = XED_ENCODER_OPERAND_TYPE_IMM0, .regClass = XED_REG_CLASS_INVALID, .immBits = 8 }}
+            // },
+        }
+    };
 private:
     /*
 __asm__ volatile("movups %1, %%xmm0;\n" // move input into xmm0
@@ -59,6 +89,11 @@ __asm__ volatile("movups %1, %%xmm0;\n" // move input into xmm0
     void implementation(bool upper, bool compile_inline) {
         if (usesYmm()) {
             debug_print("VCVTPS2PH: YMM not supported\n");
+            exit(1);
+        }
+
+        if (operands[0].isMemoryOperand()) {
+            debug_print("VCVTPS2PH: Memory operand not supported");
             exit(1);
         }
 

@@ -140,6 +140,9 @@ ThunkRequest TestCompiler::generateInstruction(OperandsMetadata const& om) const
             }
             case XED_ENCODER_OPERAND_TYPE_IMM0:
             {
+                if (o.setImmValue) {
+                    return xed_imm0(o.immValue, o.immBits);
+                }
                 return xed_imm0(std::rand() & 0xff, o.immBits);
             }
             default:
