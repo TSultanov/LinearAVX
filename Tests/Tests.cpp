@@ -67,6 +67,20 @@ InstructionMetadata tests[] = {
     VADDPD::Metadata,
     SHRX::Metadata,
     SHLX::Metadata,
+    VEXTRACTF128::Metadata,
+    VEXTRACTPS::Metadata,
+    VINSERTF128::Metadata,
+    VINSERTPS::Metadata,
+    VMOVQ::Metadata,
+    VMOVSS::Metadata,
+    VMOVSD::Metadata,
+    VPERM2F128::Metadata,
+    VRSQRTPS::Metadata,
+    VRSQRTSS::Metadata,
+    VPEXTRB::Metadata,
+    VPEXTRD::Metadata,
+    VPEXTRQ::Metadata,
+    VPEXTRW::Metadata,
 };
 
 int main() {

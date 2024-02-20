@@ -30,6 +30,10 @@ const std::vector<xed_reg_enum_t> TestCompiler::gpRegs = {
     XED_REG_R10, XED_REG_R11, XED_REG_R12, XED_REG_R13, XED_REG_R14, XED_REG_R15
 };
 
+const std::vector<xed_reg_enum_t> TestCompiler::gp8Regs = {
+    XED_REG_AL, XED_REG_BL, XED_REG_CL, XED_REG_DL
+};
+
 const std::vector<xed_reg_enum_t> TestCompiler::gp32Regs = {
     XED_REG_EAX, XED_REG_EBX, XED_REG_ECX, XED_REG_EDX, XED_REG_ESI, XED_REG_EDI
 };
@@ -57,6 +61,10 @@ std::vector<ThunkRequest> TestCompiler::generateInstructions() const {
         ret.emplace_back(inst);
     }
     return ret;
+}
+
+xed_reg_enum_t r8tor64(xed_reg_enum_t reg) {
+    return (xed_reg_enum_t)((reg - XED_REG_AL) + XED_REG_RAX);
 }
 
 xed_reg_enum_t r32tor64(xed_reg_enum_t reg) {
@@ -94,6 +102,17 @@ ThunkRequest TestCompiler::generateInstruction(OperandsMetadata const& om) const
                         for (auto reg : ymmRegs) {
                             if (usedRegisters.contains(reg) || usedRegisters.contains(ymmToXmm(reg))) continue;
                             usedRegisters.insert(reg);
+                            return xed_reg(reg);
+                        }
+
+                        return std::nullopt;
+                    }
+                    case XED_REG_CLASS_GPR8:
+                    {
+                        for (auto reg : gp8Regs) {
+                            auto r64 = r8tor64(reg);
+                            if (usedRegisters.contains(r64)) continue;
+                            usedRegisters.insert(r64);
                             return xed_reg(reg);
                         }
 

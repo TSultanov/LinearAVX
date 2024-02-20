@@ -19,7 +19,7 @@ extern "C" {
 
 struct OperandMetadata {
     const xed_encoder_operand_type_t operand;
-    const xed_reg_class_enum_t regClass;
+    const xed_reg_class_enum_t regClass = XED_REG_CLASS_INVALID;
     const xed_uint_t immBits;
     const bool setImmValue = false;
     const uint64_t immValue = 0;

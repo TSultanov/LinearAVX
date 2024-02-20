@@ -94,6 +94,7 @@ public:
     static void* compileRequests(std::vector<xed_encoder_request_t> requests);
 
     static const std::vector<xed_reg_enum_t> gpRegs;
+    static const std::vector<xed_reg_enum_t> gp8Regs;
     static const std::vector<xed_reg_enum_t> gp32Regs;
     static const std::vector<xed_reg_enum_t> xmmRegs;
     static const std::vector<xed_reg_enum_t> ymmRegs;

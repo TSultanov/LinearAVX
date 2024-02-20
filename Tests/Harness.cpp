@@ -532,6 +532,7 @@ bool TestResult::printResult() const {
         for (auto b : translatedResult.output.mem) {
             printf(" %02x", b);
         }
+        printf("\n");
         ret = true;
     }
 

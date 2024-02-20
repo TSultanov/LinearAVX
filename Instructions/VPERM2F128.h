@@ -1,9 +1,34 @@
 #include "Instruction.h"
+#include "Metadata.h"
 #include <unordered_set>
 
 class VPERM2F128 : public Instruction {
 public:
     VPERM2F128(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd) : Instruction(rip, ilen, xedd) {}
+
+    static const inline InstructionMetadata Metadata = {
+        .iclass = XED_ICLASS_VPERM2F128,
+        .operandSets = {
+            { 
+                .vectorLength = 256,
+                .operands = {
+                    { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
+                    { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
+                    { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
+                    { .operand = XED_ENCODER_OPERAND_TYPE_IMM0, .immBits = 8 },
+                }
+            },
+            { 
+                .vectorLength = 256,
+                .operands = {
+                    { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
+                    { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
+                    { .operand = XED_ENCODER_OPERAND_TYPE_MEM },
+                    { .operand = XED_ENCODER_OPERAND_TYPE_IMM0, .immBits = 8 },
+                }
+            },
+        }
+    };
 private:
     /*
     CASE IMM8[1:0] of
