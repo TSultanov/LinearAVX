@@ -1,5 +1,6 @@
 #include "CompilableInstruction.h"
 #include "xed/xed-encoder-hl.h"
+#include "xed/xed-reg-enum.h"
 
 class VFMSUB231PS : public CompilableInstruction<VFMSUB231PS> {
 public:
@@ -42,7 +43,8 @@ private:
         withPreserveXmmReg(tempReg, [&]() {
             movups(xed_reg(tempReg), operands[1].toEncoderOperand(upper));
             mulps(xed_reg(tempReg), operands[2].toEncoderOperand(upper));
-            subps(operands[0].toEncoderOperand(upper), xed_reg(tempReg));
+            subps(xed_reg(tempReg), operands[0].toEncoderOperand(upper));
+            movups(operands[0].toEncoderOperand(upper), xed_reg(tempReg));
         });
         returnReg(tempReg);
 

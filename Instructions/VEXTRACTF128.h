@@ -39,11 +39,11 @@ private:
         auto value = operands[2].immValue();
         if(!value) {
             if (!upper) {
-                movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
+                movups(operands[0].toEncoderOperand(false), operands[1].toEncoderOperand(upper));
             }
         } else {
             if (upper) {
-                movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
+                movups(operands[0].toEncoderOperand(false), operands[1].toEncoderOperand(upper));
             }
         }
 

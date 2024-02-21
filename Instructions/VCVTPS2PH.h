@@ -103,7 +103,7 @@ __asm__ volatile("movups %1, %%xmm0;\n" // move input into xmm0
             auto outputReg = operands[0].toEncoderOperand(upper);
             auto tempReg = getUnusedXmmReg();
 
-            withFreeReg([=](xed_reg_enum_t tempGpr) {
+            withFreeReg([&](xed_reg_enum_t tempGpr) {
                 movups(xed_reg(inputReg), input);
                 xorps(outputReg, outputReg);
 
@@ -146,6 +146,10 @@ __asm__ volatile("movups %1, %%xmm0;\n" // move input into xmm0
 
             returnReg(tempReg);
             returnReg(inputReg); 
+        }
+
+        if(operands[0].isXmm()) {
+            zeroupperInternal(operands[0]);
         }
     }
 };

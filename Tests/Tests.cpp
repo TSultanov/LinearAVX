@@ -86,21 +86,29 @@ InstructionMetadata tests[] = {
 int main() {
     xed_tables_init();
 
-    bool hadErrors = false;
+    uint64_t numErrors = 0;
 
-    for (auto metadata : tests) {
-        TestCompiler compiler(metadata);
-        auto thunks = compiler.getThunks();
-        for (auto const& thunk : thunks) {
-            printf("Test %s\n", xed_iform_enum_t2str(thunk.iform));
-            Harness harness(thunk);
-            TestResult result = harness.runTests();
-            bool res = result.printResult();
-            if (res) hadErrors = true;
+    for (int i = 0; i < 10; i ++) {
+        printf("==== Run %d ====\n", i);
+        uint64_t runErrors = 0;
+        for (auto metadata : tests) {
+            TestCompiler compiler(metadata);
+            auto thunks = compiler.getThunks();
+            for (auto const& thunk : thunks) {
+                printf("Test %s\n", xed_iform_enum_t2str(thunk.iform));
+                Harness harness(thunk);
+                TestResult result = harness.runTests();
+                bool res = result.printResult();
+                if (res) { 
+                    numErrors++;
+                    runErrors++;
+                }
+            }
         }
+        printf("There were %lu errors during run %d\n\n", runErrors, i);
     }
-    if (hadErrors) {
-        printf("There were errors during the run\n");
+    if (numErrors) {
+        printf("There were %lu errors during all runs\n", numErrors);
         exit(1);
     }
 }

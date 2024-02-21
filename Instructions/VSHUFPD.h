@@ -39,8 +39,13 @@ public:
     };
 private:
     void implementation(bool upper, bool compile_inline) {
+        auto imm = operands[3].immValue();
+        if(upper) {
+            imm >>= 2;
+        }
+
         map3opto2op(upper, [&](xed_encoder_operand_t const& op0, xed_encoder_operand_t const& op1) {
-            shufpd(op0, op1, operands[3].toEncoderOperand(upper));
+            shufpd(op0, op1, xed_imm0(imm, 8));
         });
 
         if (operands[0].isXmm()) {

@@ -573,9 +573,9 @@ void Instruction::swap_out_upper_ymm(std::unordered_set<xed_reg_enum_t> register
 
 void Instruction::swap_in_upper_ymm(bool force) {
     void* getYmmAddr = (void*)&get_ymm_storage;
-    withReg(XED_REG_RBX, [=]() {
+    withReg(XED_REG_RBX, [&]() {
         mov(XED_REG_RBX, (uint64_t)getYmmAddr);
-        withReg(XED_REG_RAX, [=]() {
+        withReg(XED_REG_RAX, [&]() {
             call(xed_reg(XED_REG_RBX));
             // RAX now will contain the ymm pointer
 
@@ -705,9 +705,16 @@ xed_reg_enum_t Instruction::getUnusedReg() {
     return XED_REG_INVALID;
 }
 
+xed_reg_enum_t xmmToYmm(xed_reg_enum_t reg) {
+    if (reg >= XED_REG_YMM0 && reg <= XED_REG_YMM15) {
+        return reg;
+    }
+    return (xed_reg_enum_t)(reg - XED_REG_XMM0 + XED_REG_YMM0);
+}
+
 xed_reg_enum_t Instruction::getUnusedXmmReg() {
     for (auto reg : xmmRegs) {
-        if (usedRegs.count(reg) == 0) {
+        if (!usedRegs.contains(reg) && !usedRegs.contains(xmmToYmm(reg))) {
             usedRegs.insert(reg);
             return reg;
         }

@@ -62,12 +62,12 @@ private:
         // separate out parts of imm8
         uint8_t a = imm8 & 0b11;
         uint8_t b = (imm8 >> 4) & 0b11;
-        uint8_t c = (imm8 >> 3) & 0b1;
-        uint8_t d = (imm8 >> 7) & 0b1;
+        uint8_t c = (imm8 & (0b1 << 3)) >> 3;
+        uint8_t d = (imm8 & (0b1 << 7)) >> 7;
 
         // take temp Xmm reg
         auto tempReg = getUnusedXmmReg();
-        withPreserveXmmReg(tempReg, [=]() {
+        withPreserveXmmReg(tempReg, [&]() {
             if (c) {
                 xorps(xed_reg(tempReg), xed_reg(tempReg));
             } else {
@@ -111,7 +111,7 @@ private:
 
             movups(operands[0].toXmmReg(), xed_reg(tempReg));
 
-            std::unordered_set<xed_reg_enum_t> tempRegs = { tempReg };
+            std::unordered_set<xed_reg_enum_t> tempRegs = { operands[0].toXmmReg(), tempReg };
             swap_in_upper_ymm(tempRegs);
             if (d) {
                 xorps(xed_reg(tempReg), xed_reg(tempReg));

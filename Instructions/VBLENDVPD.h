@@ -52,7 +52,7 @@ private:
 
         int i = 0;
         for (auto& op : operands) {
-            if (op.reg() == XED_REG_XMM0) {
+            if (op.reg() == XED_REG_XMM0 || op.reg() == XED_REG_YMM0) {
                 usesXmm0 = true;
                 xmm0operand = i;
                 i++;
