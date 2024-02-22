@@ -35,7 +35,8 @@ const std::vector<xed_reg_enum_t> TestCompiler::gp8Regs = {
 };
 
 const std::vector<xed_reg_enum_t> TestCompiler::gp32Regs = {
-    XED_REG_EAX, XED_REG_EBX, XED_REG_ECX, XED_REG_EDX, XED_REG_ESI, XED_REG_EDI
+    XED_REG_EAX, XED_REG_EBX, XED_REG_ECX, XED_REG_EDX, XED_REG_ESI, XED_REG_EDI, XED_REG_R8D, XED_REG_R9D,
+    XED_REG_R10D,XED_REG_R11D, XED_REG_R12D, XED_REG_R13D, XED_REG_R14D, XED_REG_R15D
 };
 
 const std::vector<xed_reg_enum_t> TestCompiler::xmmRegs = {

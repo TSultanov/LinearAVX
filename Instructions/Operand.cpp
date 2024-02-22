@@ -22,7 +22,7 @@ bool Operand::isYmm() const {
 }
 
 bool Operand::is32BitRegister() const {
-    return m_reg >= XED_REG_EAX && m_reg <= XED_REG_EDI;
+    return m_reg >= XED_REG_EAX && m_reg <= XED_REG_R15D;
 }
 
 bool Operand::is64BitRegister() const {

@@ -80,13 +80,13 @@ private:
                 auto o = op.toEncoderOperand(false);
                 if (o.u.mem.base == XED_REG_RCX || o.u.mem.base == XED_REG_ECX) {
                     original = o.u.mem.base;
-                    if (*original >= XED_REG_EAX && *original <= XED_REG_EDI) {
+                    if (*original >= XED_REG_EAX && *original <= XED_REG_R15D) {
                         *original = (xed_reg_enum_t)(*original - XED_REG_EAX + XED_REG_RAX);
                     }
                 }
                 if (o.u.mem.scale == XED_REG_RCX || o.u.mem.base == XED_REG_ECX) {
                     original = o.u.mem.index;
-                    if (*original >= XED_REG_EAX && *original <= XED_REG_EDI) {
+                    if (*original >= XED_REG_EAX && *original <= XED_REG_R15D) {
                         *original = (xed_reg_enum_t)(*original - XED_REG_EAX + XED_REG_RAX);
                     }
                 }

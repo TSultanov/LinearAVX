@@ -71,7 +71,7 @@ private:
     }
 
     bool is32bitGpr(xed_reg_enum_t reg) {
-        return reg >= XED_REG_EAX && reg <= XED_REG_EDI;
+        return reg >= XED_REG_EAX && reg <= XED_REG_R15D;
     }
 
     void implementation(bool upper, bool compile_inline) {

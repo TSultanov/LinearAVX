@@ -224,10 +224,10 @@ void sigtrap_handler(int sig, siginfo_t *info, void *ucontext) {
         //     origSigtrapAct->sa_sigaction(sig, info, ucontext);
         // }
         // return;
-        // debug_print("PID %d, attach debugger and press any key...\n", getpid());
-        // getchar();
-        // return;
-        exit(1);
+        debug_print("PID %d, attach debugger and press any key...\n", getpid());
+        getchar();
+        return;
+        // exit(1);
     }
 
     // Save return address on stack
