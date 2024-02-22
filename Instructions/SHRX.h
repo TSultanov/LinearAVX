@@ -18,12 +18,12 @@ public:
                 { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 },
                 { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 }}
             },
-            // { 
-            //     .vectorLength = 32,
-            //     .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 },
-            //     { .operand = XED_ENCODER_OPERAND_TYPE_MEM, .regClass = XED_REG_CLASS_INVALID },
-            //     { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 }}
-            // },
+            { 
+                .vectorLength = 32,
+                .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 },
+                { .operand = XED_ENCODER_OPERAND_TYPE_MEM, .regClass = XED_REG_CLASS_INVALID },
+                { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 }}
+            },
             { 
                 .vectorLength = 64,
                 .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR64 },
@@ -40,6 +40,10 @@ public:
     };
 private:
 
+    xed_reg_enum_t to32bitGpr(xed_reg_enum_t reg) {
+        return (xed_reg_enum_t)(reg - XED_REG_RAX + XED_REG_EAX);
+    }
+
     xed_encoder_operand_t substRcx(xed_encoder_operand_t op, std::optional<xed_reg_enum_t>  subst) {
         if (!subst.has_value()) {
             return op;
@@ -54,16 +58,20 @@ private:
                 op.u.mem.base = *subst;
             }
             if (op.u.mem.base == XED_REG_ECX) {
-                op.u.mem.base = (xed_reg_enum_t)(*subst - XED_REG_RAX + XED_REG_EAX);
+                op.u.mem.base = to32bitGpr(*subst);
             }
             if (op.u.mem.index == XED_REG_RCX) {
                 op.u.mem.index = *subst;
             }
             if (op.u.mem.index == XED_REG_ECX) {
-                op.u.mem.index = (xed_reg_enum_t)(*subst - XED_REG_RAX + XED_REG_EAX);
+                op.u.mem.index = to32bitGpr(*subst);
             }
         }
         return op;
+    }
+
+    bool is32bitGpr(xed_reg_enum_t reg) {
+        return reg >= XED_REG_EAX && reg <= XED_REG_EDI;
     }
 
     void implementation(bool upper, bool compile_inline) {
@@ -77,13 +85,13 @@ private:
                 auto o = op.toEncoderOperand(false);
                 if (o.u.mem.base == XED_REG_RCX || o.u.mem.base == XED_REG_ECX) {
                     original = o.u.mem.base;
-                    if (*original >= XED_REG_EAX && *original <= XED_REG_EDI) {
+                    if (is32bitGpr(*original)) {
                         *original = (xed_reg_enum_t)(*original - XED_REG_EAX + XED_REG_RAX);
                     }
                 }
                 if (o.u.mem.scale == XED_REG_RCX || o.u.mem.base == XED_REG_ECX) {
                     original = o.u.mem.index;
-                    if (*original >= XED_REG_EAX && *original <= XED_REG_EDI) {
+                    if (is32bitGpr(*original)) {
                         *original = (xed_reg_enum_t)(*original - XED_REG_EAX + XED_REG_RAX);
                     }
                 }
@@ -98,7 +106,12 @@ private:
 
         withFreeReg([&](xed_reg_enum_t tempReg) {
             if (operands[1].isMemoryOperand()) {
-                mov(xed_reg(tempReg), substRcx(operands[1].toEncoderOperand(false), rcxSubst));
+                auto memop = substRcx(operands[1].toEncoderOperand(false), rcxSubst);
+                if (memop.width_bits == 32) {
+                    mov(xed_reg(to32bitGpr(tempReg)), memop);
+                } else {
+                    mov(xed_reg(tempReg), memop);
+                }
             } else {
                 mov(xed_reg(tempReg), substRcx(xed_reg(operands[1].to64BitRegister()), rcxSubst));
             }

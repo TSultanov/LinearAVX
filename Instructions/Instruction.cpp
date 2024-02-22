@@ -6,6 +6,7 @@
 #include "xed/xed-iform-enum.h"
 #include "xed/xed-operand-enum.h"
 #include "xed/xed-reg-enum.h"
+#include <algorithm>
 #include <cstdio>
 #include <unistd.h>
 #include <unordered_map>
@@ -140,7 +141,12 @@ void Instruction::mov(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     xed_encoder_request_t req;
     xed_encoder_instruction_t enc_inst;
 
-    xed_inst2(&enc_inst, dstate, XED_ICLASS_MOV, 64, op0, op1);
+    xed_uint_t eow = 64;
+    if (op0.width_bits != 0 || op1.width_bits != 0) {
+        eow = std::max(op0.width_bits, op1.width_bits);
+    }
+
+    xed_inst2(&enc_inst, dstate, XED_ICLASS_MOV, eow, op0, op1);
     xed_convert_to_encoder_request(&req, &enc_inst);
 
     internal_requests.push_back(req);

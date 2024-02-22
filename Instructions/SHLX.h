@@ -17,12 +17,12 @@ public:
                 { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 },
                 { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 }}
             },
-            // { 
-            //     .vectorLength = 32,
-            //     .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 },
-            //     { .operand = XED_ENCODER_OPERAND_TYPE_MEM, .regClass = XED_REG_CLASS_INVALID },
-            //     { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 }}
-            // },
+            { 
+                .vectorLength = 32,
+                .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 },
+                { .operand = XED_ENCODER_OPERAND_TYPE_MEM, .regClass = XED_REG_CLASS_INVALID },
+                { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 }}
+            },
             { 
                 .vectorLength = 64,
                 .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR64 },
@@ -65,6 +65,10 @@ private:
         return op;
     }
 
+    xed_reg_enum_t to32bitGpr(xed_reg_enum_t reg) {
+        return (xed_reg_enum_t)(reg - XED_REG_RAX + XED_REG_EAX);
+    }
+
     void implementation(bool upper, bool compile_inline) {
         std::optional<xed_reg_enum_t> rcxSubst;
         std::optional<xed_reg_enum_t> original;
@@ -97,7 +101,12 @@ private:
 
         withFreeReg([&](xed_reg_enum_t tempReg) {
             if (operands[1].isMemoryOperand()) {
-                mov(xed_reg(tempReg), substRcx(operands[1].toEncoderOperand(false), rcxSubst));
+                auto memop = substRcx(operands[1].toEncoderOperand(false), rcxSubst);
+                if (memop.width_bits == 32) {
+                    mov(xed_reg(to32bitGpr(tempReg)), memop);
+                } else {
+                    mov(xed_reg(tempReg), memop);
+                }
             } else {
                 mov(xed_reg(tempReg), substRcx(xed_reg(operands[1].to64BitRegister()), rcxSubst));
             }

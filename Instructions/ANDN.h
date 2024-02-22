@@ -45,11 +45,7 @@ public:
 private:
     void implementation(bool upper, bool compile_inline) {
         withFreeReg([&](xed_reg_enum_t tempReg) {
-            if (operands[1].isMemoryOperand()) {
-                mov(xed_reg(tempReg), operands[1].toEncoderOperand(false));
-            } else {
-                mov(xed_reg(tempReg), xed_reg(operands[1].to64BitRegister()));
-            }
+            mov(xed_reg(tempReg), xed_reg(operands[1].to64BitRegister()));
 
             if (opWidth == 64) {
                 not_i(xed_reg(tempReg));
