@@ -23,6 +23,7 @@ extern "C" {
 
 enum class CompilationStrategy {
     DirectCall,
+    DirectCallPopRax,
     Inline,
     FarJump
 };

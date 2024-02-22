@@ -52,7 +52,7 @@ void decode_instruction_internal(uint8_t *inst, xed_decoded_inst_t *xedd, uint8_
 }
 
 void printStats() {
-    debug_print("Total instructions recompiled: %llu\n", totalInstructionsRecompiled);
+    debug_print("PID %d: total instructions recompiled: %llu\n", getpid(), totalInstructionsRecompiled);
 }
 
 int reencode_instructions(uint8_t* instructionPointer) {
@@ -60,7 +60,10 @@ int reencode_instructions(uint8_t* instructionPointer) {
     // decoode as many instructions as we can
     std::vector<std::shared_ptr<Instruction>> decodedInstructions;
     uint64_t decodedInstructionLength = 0;
+    int encInst = 0;
     while (1) {
+        encInst++;
+
         xed_decoded_inst_t xedd;
         uint8_t olen = 15;
 
@@ -72,9 +75,11 @@ int reencode_instructions(uint8_t* instructionPointer) {
         xed_iclass_enum_t iclass = xed_decoded_inst_get_iclass(&xedd);
 
         if (!iclassMapping.contains(iclass)) {
-            if (iclass == XED_ICLASS_NOP) {
+            if (iclass == XED_ICLASS_NOP && decodedInstructions.size() == 0) {
                 debug_print("Why the hell are we trapping at NOP?\n");
                 pthread_mutex_unlock(&csMutex);
+                // debug_print("PID %d, attach debugger and press any key...\n", getpid());
+                // getchar();
                 // getchar();
                 return olen;
             }
@@ -91,7 +96,10 @@ int reencode_instructions(uint8_t* instructionPointer) {
         auto instr = instrFactory((uint64_t)currentInstrPointer, olen, xedd);
         decodedInstructions.push_back(instr);
 
-        break;
+        // break;
+        if (encInst == 10) {
+            break;
+        }
     }
 
     if (decodedInstructions.empty()) {
@@ -139,17 +147,38 @@ int reencode_instructions(uint8_t* instructionPointer) {
     // MOV RAX imm64 (10b)
     // JMP RAX (2b) - encode a far call
     // POP RAX (1b)
+
+    // Disregard the comment above
+    // We encode the following
+    // if space permits
+    // JMP REL to the trampoline (5 b)
+    // NOP slide otherwise
     const uint64_t trampolineSize = 1 + 10 + 2 + 1;
     if (decodedInstructionLength > trampolineSize) {
     // if (false) {
         uint32_t encodedLength = 0;
         uint8_t* chunk = compiler.encode(CompilationStrategy::FarJump, &encodedLength, (uint64_t)instructionPointer + decodedInstructionLength - 1);
+        write_protect_memory(chunk, encodedLength);
+        debug_print("Chunk at %llx, length %d, first bytes: %02x %02x %02x...\n", (uint64_t)chunk, encodedLength, chunk[0], chunk[1], chunk[2]);
 
-        debug_print("Chunk at %llx, length %d\n", (uint64_t)chunk, encodedLength);
-
-        // fill nops
         uint32_t i = 0;
-        for (i = 0; i < decodedInstructionLength - trampolineSize; i++) {
+        instructionPointer[i] = 0x90; // fill one NOP to make rosetta happy
+        i++;
+        uint64_t freeSpace = decodedInstructionLength - trampolineSize - 1;
+        uint64_t nopSlideEnd = decodedInstructionLength - trampolineSize;
+        if (freeSpace < 127 && freeSpace >= 4) {
+            instructionPointer[i] = 0xeb;
+            i++;
+            instructionPointer[i] = (int8_t)freeSpace-2;
+            i++;
+        } else if (freeSpace < 2147483647 && freeSpace >= 7) {
+            instructionPointer[i] = 0xe9;
+            i++;
+            *((uint32_t*)(instructionPointer + i)) = (uint32_t)(nopSlideEnd-5);
+            i += 4;
+        }
+        // fill nops
+        for (; i < nopSlideEnd; i++) {
             instructionPointer[i] = 0x90;
         }
         debug_print("Written %d nops, will emit trampoline at %llx\n", i, (uint64_t)instructionPointer + i);
@@ -179,6 +208,7 @@ int reencode_instructions(uint8_t* instructionPointer) {
     } else {
         uint32_t encodedLength = 0;
         uint8_t* chunk = compiler.encode(CompilationStrategy::DirectCall, &encodedLength, -1);
+        debug_print("Writing chunk at 0x%llx\n", (uint64_t)chunk);
 
         // otherwise emit INT3 at the end of the block from where we taken the instructions
         // fill nops

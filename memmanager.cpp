@@ -1,4 +1,5 @@
 #include "memmanager.h"
+#include "utils.h"
 #include "xed/xed-iclass-enum.h"
 #include <dlfcn.h>
 // #include <mach/mach_traps.h>
@@ -65,6 +66,14 @@ uint8_t* alloc_executable(uint64_t size) {
     // mmap anonymous memory
     auto memory = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_PRIVATE, -1, 0);
     return memory;
+}
+
+void write_protect_memory(void* memory, size_t length) {
+    auto result = mprotect(memory, length, PROT_READ | PROT_EXEC);
+    if(result != 0) {
+        debug_print("mprotect failed: %s\n", strerror(errno));
+        exit(1);
+    }
 }
 
 static std::unordered_map<uint64_t, void*> executable_chunks_for_locations;

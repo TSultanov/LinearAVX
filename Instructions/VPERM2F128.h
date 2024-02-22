@@ -53,7 +53,7 @@ private:
     std::vector<xed_encoder_request_t> const& compile(CompilationStrategy compilationStrategy, uint64_t returnAddr = 0) {
         internal_requests.clear();
 
-        if (compilationStrategy == CompilationStrategy::DirectCall) {
+        if (compilationStrategy == CompilationStrategy::DirectCall || compilationStrategy == CompilationStrategy::DirectCallPopRax) {
             rspOffset = -8;
         }
 

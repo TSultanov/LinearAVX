@@ -47,7 +47,7 @@ std::vector<Compiler::instruction> Compiler::compile(CompilationStrategy compila
     const xed_state_t dstate = {.mmode = XED_MACHINE_MODE_LONG_64,
             .stack_addr_width = XED_ADDRESS_WIDTH_64b};
 
-    if (compilationStrategy == CompilationStrategy::FarJump) {
+    if (compilationStrategy == CompilationStrategy::FarJump || compilationStrategy == CompilationStrategy::DirectCallPopRax) {
         // pop RAX
         instruction instr = {
             .buffer = {0x58},
@@ -94,7 +94,7 @@ std::vector<Compiler::instruction> Compiler::compile(CompilationStrategy compila
         // MOV RAX, returnAddress
         instruction instr2 = {
             .buffer = {0x48, 0xb8},
-           .olen = 10,
+            .olen = 10,
         };
         *(uint64_t*)(instr2.buffer + 2) = returnAddress;
         encodedInstructions.push_back(instr2);
@@ -107,7 +107,7 @@ std::vector<Compiler::instruction> Compiler::compile(CompilationStrategy compila
         encodedInstructions.push_back(instr3);
     }
 
-    if (compilationStrategy == CompilationStrategy::DirectCall) {
+    if (compilationStrategy == CompilationStrategy::DirectCall || compilationStrategy == CompilationStrategy::DirectCallPopRax) {
         xed_encoder_request_t req;
         xed_encoder_instruction_t enc_inst;
         xed_inst0(&enc_inst, 
