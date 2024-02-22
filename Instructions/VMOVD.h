@@ -10,22 +10,22 @@ public:
         .iclass = XED_ICLASS_VMOVD,
         .operandSets = {
             { 
-                .vectorLength = 64,
+                .vectorLength = 32,
                 .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_XMM },
-                { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR64 }}
+                { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 }}
             },
             { 
-                .vectorLength = 64,
+                .vectorLength = 32,
                 .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_XMM },
                 { .operand = XED_ENCODER_OPERAND_TYPE_MEM }}
             },
             { 
-                .vectorLength = 64,
-                .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR64 },
+                .vectorLength = 32,
+                .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 },
                 { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_XMM }}
             },
             { 
-                .vectorLength = 64,
+                .vectorLength = 32,
                 .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_MEM },
                 { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_XMM }}
             },

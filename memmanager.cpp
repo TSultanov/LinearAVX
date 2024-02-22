@@ -1,6 +1,7 @@
 #include "memmanager.h"
 #include "utils.h"
 #include "xed/xed-iclass-enum.h"
+#include <cstring>
 #include <dlfcn.h>
 // #include <mach/mach_traps.h>
 // #include <mach/vm_map.h>

@@ -93,6 +93,7 @@ InstructionMetadata tests[] = {
     VPADDD::Metadata,
     VPADDQ::Metadata,
     VPSRLDQ::Metadata,
+    ANDN::Metadata,
 };
 
 int main() {

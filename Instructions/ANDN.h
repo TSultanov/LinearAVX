@@ -3,16 +3,51 @@
 
 class ANDN : public CompilableInstruction<ANDN> {
 public:
-    ANDN(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd) : CompilableInstruction(rip, ilen, xedd) {
-        usedRegs.insert(XED_REG_RCX);
-    }
+    ANDN(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd) : CompilableInstruction(rip, ilen, xedd) {}
+
+    static const inline InstructionMetadata Metadata = {
+        .iclass = XED_ICLASS_ANDN,
+        .operandSets = {
+            { 
+                .vectorLength = 32,
+                .operands = {
+                    { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 },
+                    { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 },
+                    { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 },
+                }
+            },
+            { 
+                .vectorLength = 32,
+                .operands = {
+                    { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 },
+                    { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR32 },
+                    { .operand = XED_ENCODER_OPERAND_TYPE_MEM },
+                }
+            },
+            { 
+                .vectorLength = 64,
+                .operands = {
+                    { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR64 },
+                    { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR64 },
+                    { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR64 }
+                }
+            },
+            { 
+                .vectorLength = 64,
+                .operands = {
+                    { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR64 },
+                    { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_GPR64 },
+                    { .operand = XED_ENCODER_OPERAND_TYPE_MEM },
+                }
+            },
+        }
+    };
 private:
     void implementation(bool upper, bool compile_inline) {
-        withFreeReg([=](xed_reg_enum_t tempReg) {
+        withFreeReg([&](xed_reg_enum_t tempReg) {
             if (operands[1].isMemoryOperand()) {
                 mov(xed_reg(tempReg), operands[1].toEncoderOperand(false));
-            }
-            if (operands[1].is32BitRegister()) {
+            } else {
                 mov(xed_reg(tempReg), xed_reg(operands[1].to64BitRegister()));
             }
 
