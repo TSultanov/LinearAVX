@@ -103,22 +103,22 @@ int reencode_instructions(uint8_t* instructionPointer) {
     }
 
     if (decodedInstructions.empty()) {
-        debug_print("No supported instructions found\n");
-        debug_print("Last decoded instruction:\n");
+        printf("No supported instructions found\n");
+        printf("Last decoded instruction:\n");
         xed_decoded_inst_t xedd;
         uint8_t olen = 15;
         decode_instruction_internal(instructionPointer + decodedInstructionLength, &xedd, &olen);
 
-        debug_print("olen = %d\n", olen);
+        printf("olen = %d\n", olen);
         for(uint32_t i = 0; i < olen; i++) {
             debug_print(" %02x", (unsigned int)(*((unsigned char*)instructionPointer + decodedInstructionLength + i)));
         }
-        debug_print("\n");
+        printf("\n");
 
         print_instr(&xedd);
         printStats();
         pthread_mutex_unlock(&csMutex);
-        waitForDebugger();
+        exit(1);
         return -1;
     }
 

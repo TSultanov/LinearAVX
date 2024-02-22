@@ -75,6 +75,18 @@
 #include "VMINSD.h"
 #include "VCOMISS.h"
 #include "VCOMISD.h"
+#include "VPSHUFB.h"
+#include "VMOVD.h"
+#include "VADDSS.h"
+#include "VADDSD.h"
+#include "VPINSRB.h"
+#include "VPINSRD.h"
+#include "VPINSRQ.h"
+#include "VPADDB.h"
+#include "VPADDD.h"
+#include "VPADDW.h"
+#include "VPADDQ.h"
+#include "VPSRLQ.h"
 #include <map>
 
 #ifdef __cplusplus
@@ -168,6 +180,18 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VMINSD),
     ICLASSMAP(VCOMISS),
     ICLASSMAP(VCOMISD),
+    ICLASSMAP(VPSHUFB),
+    ICLASSMAP(VMOVD),
+    ICLASSMAP(VADDSS),
+    ICLASSMAP(VADDSD),
+    ICLASSMAP(VPINSRB),
+    ICLASSMAP(VPINSRD),
+    ICLASSMAP(VPINSRQ),
+    ICLASSMAP(VPADDB),
+    ICLASSMAP(VPADDW),
+    ICLASSMAP(VPADDD),
+    ICLASSMAP(VPADDQ),
+    ICLASSMAP(VPSRLDQ),
 };
 
 inline void printSupportedInstructions() {

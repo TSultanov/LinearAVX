@@ -79,6 +79,7 @@ protected:
     void movss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void movd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movdqu(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movdqu_raw(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movdqa(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
@@ -92,14 +93,23 @@ protected:
     void subpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void divsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void divss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void addss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void addsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void mulsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void mulss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void mulpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void mulps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void paddb(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void paddw(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void paddd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void paddq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void maxss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void maxsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void minss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void minsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void pinsrb(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
+    void pinsrd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
+    void pinsrq(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
     void comiss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void comisd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void pand(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
@@ -130,6 +140,7 @@ protected:
     void andnpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void andnps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void psllq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void psrldq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cmppd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
     void movmskps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movmskpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
@@ -142,6 +153,7 @@ protected:
     void sqrtpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void haddps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void haddpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void pshufb(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void shl(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void shr(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void and_i(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
