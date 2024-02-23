@@ -9,18 +9,17 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -mtls-direct-seg-refs")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -mtls-direct-seg-refs")
 
 add_library(avxhandler SHARED
-    handler.c
+    handler.cpp
     handler.h
-    encoder.cpp
-    encoder.h
     decoder.c
     decoder.h
     memmanager.cpp
     memmanager.h
     printinstr.h
     printinstr.c
-        Compiler/Compiler.h
+    Compiler/Compiler.h
     Compiler/Compiler.cpp
+    Compiler/Encoder.cpp
     Instructions/Instructions.h
     Instructions/Instruction.h
     Instructions/Instruction.cpp

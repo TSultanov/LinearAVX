@@ -1,11 +1,11 @@
 #pragma once
 
-#include "xed/xed-iclass-enum.h"
-#include "xed/xed-iform-enum.h"
 #include <unordered_set>
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include "xed/xed-iform-enum.h"
+#include "xed/xed-iclass-enum.h"
 #include <xed/xed-interface.h>
 #include "xed/xed-encode.h"
 #include "xed/xed-encoder-hl.h"

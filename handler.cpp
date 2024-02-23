@@ -3,6 +3,7 @@
 #include <mach/mach_init.h>
 #include <mach/mach_traps.h>
 #include <mach/vm_map.h>
+#include <memory>
 #include <signal.h>
 #include <sys/signal.h>
 #include <stdio.h>
@@ -12,13 +13,15 @@
 #include <sys/signal.h>
 #include <unistd.h>
 #include "handler.h"
-#include "encoder.h"
+#include "Compiler/Encoder.h"
 #include <libproc.h>
 #include <pthread.h>
 #include "memmanager.h"
 #include "printinstr.h"
 #include "decoder.h"
 #include "utils.h"
+
+static std::unique_ptr<Encoder> encoder;
 
 void hello(void)
 {
@@ -54,7 +57,7 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     ucontext_t *uc = (ucontext_t *)ucontext;
     debug_print("RIP: %llx\n", uc->uc_mcontext->__ss.__rip);
 
-    int result = reencode_instructions(info->si_addr);
+    int result = encoder->reencodeInstruction(info->si_addr);
     if (result < 0) {
     // if (true) {
         debug_print("========================\n");
@@ -87,86 +90,87 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
         debug_print("R15: %llx\n", uc->uc_mcontext->__ss.__r15);
 
         // print XMM
-        __m128* ymm_state = get_ymm_storage();
-        __m128* upper_ymm = ymm_state + 16;
+        volatile __m128* ymm_state = get_ymm_storage();
+        volatile __m128* upper_ymm = ymm_state + 16;
 
         uint64_t buff[2];
-        memcpy(buff, &upper_ymm[0], sizeof(__m128));
+
+        memcpy(buff, (const void*)&upper_ymm[0], sizeof(__m128));
         debug_print("YMM0: %llx %llx ", buff[0], buff[1]);
         memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm0, sizeof(uc->uc_mcontext->__fs.__fpu_xmm0));
         debug_print("XMM0: %llx %llx\n", buff[0], buff[1]);
 
-        memcpy(buff, &upper_ymm[1], sizeof(__m128));
+        memcpy(buff,(const void*)&upper_ymm[1], sizeof(__m128));
         debug_print("YMM1: %llx %llx ", buff[0], buff[1]);
         memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm1, sizeof(uc->uc_mcontext->__fs.__fpu_xmm1));
         debug_print("XMM1: %llx %llx\n", buff[0], buff[1]);
 
-        memcpy(buff, &upper_ymm[2], sizeof(__m128));
+        memcpy(buff, (const void*)&upper_ymm[2], sizeof(__m128));
         debug_print("YMM2: %llx %llx ", buff[0], buff[1]);
         memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm2, sizeof(uc->uc_mcontext->__fs.__fpu_xmm2));
         debug_print("XMM2: %llx %llx\n", buff[0], buff[1]);
 
-        memcpy(buff, &upper_ymm[3], sizeof(__m128));
+        memcpy(buff, (const void*)&upper_ymm[3], sizeof(__m128));
         debug_print("YMM3: %llx %llx ", buff[0], buff[1]);
         memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm3, sizeof(uc->uc_mcontext->__fs.__fpu_xmm3));
         debug_print("XMM3: %llx %llx\n", buff[0], buff[1]);
 
-        memcpy(buff, &upper_ymm[4], sizeof(__m128));
+        memcpy(buff, (const void*)&upper_ymm[4], sizeof(__m128));
         debug_print("YMM4: %llx %llx ", buff[0], buff[1]);
         memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm4, sizeof(uc->uc_mcontext->__fs.__fpu_xmm4));
         debug_print("XMM4: %llx %llx\n", buff[0], buff[1]);
 
-        memcpy(buff, &upper_ymm[5], sizeof(__m128));
+        memcpy(buff, (const void*)&upper_ymm[5], sizeof(__m128));
         debug_print("YMM5: %llx %llx ", buff[0], buff[1]);
         memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm5, sizeof(uc->uc_mcontext->__fs.__fpu_xmm5));
         debug_print("XMM5: %llx %llx\n", buff[0], buff[1]);
 
-        memcpy(buff, &upper_ymm[6], sizeof(__m128));
+        memcpy(buff, (const void*)&upper_ymm[6], sizeof(__m128));
         debug_print("YMM6: %llx %llx ", buff[0], buff[1]);
         memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm6, sizeof(uc->uc_mcontext->__fs.__fpu_xmm6));
         debug_print("XMM6: %llx %llx\n", buff[0], buff[1]);
 
-        memcpy(buff, &upper_ymm[7], sizeof(__m128));
+        memcpy(buff, (const void*)&upper_ymm[7], sizeof(__m128));
         debug_print("YMM7: %llx %llx ", buff[0], buff[1]);
         memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm7, sizeof(uc->uc_mcontext->__fs.__fpu_xmm7));
         debug_print("XMM7: %llx %llx\n", buff[0], buff[1]);
 
-        memcpy(buff, &upper_ymm[8], sizeof(__m128));
+        memcpy(buff, (const void*)&upper_ymm[8], sizeof(__m128));
         debug_print("YMM8: %llx %llx ", buff[0], buff[1]);
         memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm7, sizeof(uc->uc_mcontext->__fs.__fpu_xmm8));
         debug_print("XMM8: %llx %llx\n", buff[0], buff[1]);
 
-        memcpy(buff, &upper_ymm[9], sizeof(__m128));
+        memcpy(buff, (const void*)&upper_ymm[9], sizeof(__m128));
         debug_print("YMM9: %llx %llx ", buff[0], buff[1]);
         memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm9, sizeof(uc->uc_mcontext->__fs.__fpu_xmm9));
         debug_print("XMM9: %llx %llx\n", buff[0], buff[1]);
 
-        memcpy(buff, &upper_ymm[10], sizeof(__m128));
+        memcpy(buff, (const void*)&upper_ymm[10], sizeof(__m128));
         debug_print("YMM10: %llx %llx ", buff[0], buff[1]);
         memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm10, sizeof(uc->uc_mcontext->__fs.__fpu_xmm10));
         debug_print("XMM10: %llx %llx\n", buff[0], buff[1]);
 
-        memcpy(buff, &upper_ymm[11], sizeof(__m128));
+        memcpy(buff, (const void*)&upper_ymm[11], sizeof(__m128));
         debug_print("YMM11: %llx %llx ", buff[0], buff[1]);
         memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm11, sizeof(uc->uc_mcontext->__fs.__fpu_xmm11));
         debug_print("XMM11: %llx %llx\n", buff[0], buff[1]);
 
-        memcpy(buff, &upper_ymm[12], sizeof(__m128));
+        memcpy(buff, (const void*)&upper_ymm[12], sizeof(__m128));
         debug_print("YMM12: %llx %llx ", buff[0], buff[1]);
         memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm12, sizeof(uc->uc_mcontext->__fs.__fpu_xmm12));
         debug_print("XMM12: %llx %llx\n", buff[0], buff[1]);
 
-        memcpy(buff, &upper_ymm[13], sizeof(__m128));
+        memcpy(buff, (const void*)&upper_ymm[13], sizeof(__m128));
         debug_print("YMM13: %llx %llx ", buff[0], buff[1]);
         memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm13, sizeof(uc->uc_mcontext->__fs.__fpu_xmm13));
         debug_print("XMM13: %llx %llx\n", buff[0], buff[1]);
 
-        memcpy(buff, &upper_ymm[14], sizeof(__m128));
+        memcpy(buff, (const void*)&upper_ymm[14], sizeof(__m128));
         debug_print("YMM14: %llx %llx ", buff[0], buff[1]);
         memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm14, sizeof(uc->uc_mcontext->__fs.__fpu_xmm14));
         debug_print("XMM14: %llx %llx\n", buff[0], buff[1]);
 
-        memcpy(buff, &upper_ymm[15], sizeof(__m128));
+        memcpy(buff, (const void*)&upper_ymm[15], sizeof(__m128));
         debug_print("YMM15: %llx %llx ", buff[0], buff[1]);
         memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm15, sizeof(uc->uc_mcontext->__fs.__fpu_xmm15));
         debug_print("XMM15: %llx %llx\n", buff[0], buff[1]);
@@ -266,6 +270,8 @@ void loadMsg(void)
     xed_tables_init();
     init_sigill_handler();
     init_sigtrap_handler();
+
+    encoder = std::make_unique<Encoder>(Cache());
 
     // debug_print("PID %d, attach debugger and press any key...\n", getpid());
     // getchar();
