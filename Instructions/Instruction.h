@@ -156,6 +156,8 @@ protected:
     void haddps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void haddpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void pshufb(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void movhpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void movhps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void shl(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void shr(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void sar(xed_encoder_operand_t op0, xed_encoder_operand_t op1);

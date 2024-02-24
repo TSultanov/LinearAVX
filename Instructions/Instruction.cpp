@@ -543,6 +543,14 @@ void Instruction::movlhps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) 
     op2(XED_ICLASS_MOVLHPS, op0, op1);
 }
 
+void Instruction::movhpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_MOVHPD, op0, op1);
+}
+
+void Instruction::movhps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_MOVHPS, op0, op1);
+}
+
 void Instruction::ucomiss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_UCOMISS, op0, op1);
 }

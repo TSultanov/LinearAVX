@@ -96,6 +96,8 @@ InstructionMetadata tests[] = {
     ANDN::Metadata,
     SARX::Metadata,
     BLSR::Metadata,
+    VMOVHPD::Metadata,
+    VMOVHPS::Metadata,
 };
 
 int main() {

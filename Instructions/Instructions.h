@@ -89,6 +89,8 @@
 #include "VPSRLQ.h"
 #include "SARX.h"
 #include "BLSR.h"
+#include "VMOVHPD.h"
+#include "VMOVHPS.h"
 #include <map>
 
 #ifdef __cplusplus
@@ -196,6 +198,8 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VPSRLDQ),
     ICLASSMAP(SARX),
     ICLASSMAP(BLSR),
+    ICLASSMAP(VMOVHPD),
+    ICLASSMAP(VMOVHPS),
 };
 
 inline void printSupportedInstructions() {
