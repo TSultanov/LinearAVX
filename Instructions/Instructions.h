@@ -88,6 +88,7 @@
 #include "VPADDQ.h"
 #include "VPSRLQ.h"
 #include "SARX.h"
+#include "BLSR.h"
 #include <map>
 
 #ifdef __cplusplus
@@ -194,6 +195,7 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VPADDQ),
     ICLASSMAP(VPSRLDQ),
     ICLASSMAP(SARX),
+    ICLASSMAP(BLSR),
 };
 
 inline void printSupportedInstructions() {

@@ -97,6 +97,28 @@ void Instruction::pop(xed_reg_enum_t reg) {
     rspOffset += pointerWidthBytes;
 }
 
+void Instruction::popf() {
+    xed_encoder_request_t req;
+    xed_encoder_instruction_t enc_inst;
+
+    xed_inst0(&enc_inst, dstate, XED_ICLASS_POPF, 64);
+    xed_convert_to_encoder_request(&req, &enc_inst);
+
+    internal_requests.push_back(req);
+    rspOffset += pointerWidthBytes;
+}
+
+void Instruction::pushf() {
+    xed_encoder_request_t req;
+    xed_encoder_instruction_t enc_inst;
+
+    xed_inst0(&enc_inst, dstate, XED_ICLASS_PUSHF, 64);
+    xed_convert_to_encoder_request(&req, &enc_inst);
+
+    internal_requests.push_back(req);
+    rspOffset -= pointerWidthBytes;
+}
+
 void Instruction::shl(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     xed_encoder_request_t req;
     xed_encoder_instruction_t enc_inst;
@@ -137,6 +159,26 @@ void Instruction::and_i(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     internal_requests.push_back(req);
 }
 
+void Instruction::or_i(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    xed_encoder_request_t req;
+    xed_encoder_instruction_t enc_inst;
+
+    xed_inst2(&enc_inst, dstate, XED_ICLASS_OR, opWidth, op0, op1);
+    xed_convert_to_encoder_request(&req, &enc_inst);
+
+    internal_requests.push_back(req);
+}
+
+void Instruction::test_i(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    xed_encoder_request_t req;
+    xed_encoder_instruction_t enc_inst;
+
+    xed_inst2(&enc_inst, dstate, XED_ICLASS_TEST, opWidth, op0, op1);
+    xed_convert_to_encoder_request(&req, &enc_inst);
+
+    internal_requests.push_back(req);
+}
+
 void Instruction::not_i(xed_encoder_operand_t op0) {
     xed_encoder_request_t req;
     xed_encoder_instruction_t enc_inst;
@@ -154,6 +196,9 @@ void Instruction::mov(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     xed_uint_t eow = 64;
     if (op0.width_bits != 0 || op1.width_bits != 0) {
         eow = std::max(op0.width_bits, op1.width_bits);
+    }
+    if (op0.u.reg >= XED_REG_EAX && op0.u.reg <= XED_REG_R15D) {
+        eow = 32;
     }
 
     xed_inst2(&enc_inst, dstate, XED_ICLASS_MOV, eow, op0, op1);
@@ -841,9 +886,14 @@ void Instruction::sub(xed_reg_enum_t reg, int8_t immediate) {
     xed_encoder_request_t req;
     xed_encoder_instruction_t enc_inst;
 
-    xed_inst2(&enc_inst, dstate, XED_ICLASS_SUB, opWidth, xed_reg(reg), xed_imm0(immediate, 8));
+    xed_uint_t eow = 64;
+    if (reg >= XED_REG_EAX && reg <= XED_REG_R15D) {
+        eow = 32;
+    }
+
+    xed_inst2(&enc_inst, dstate, XED_ICLASS_SUB, eow, xed_reg(reg), xed_imm0(immediate, 8));
     xed_convert_to_encoder_request(&req, &enc_inst);
-    xed_encoder_request_set_effective_operand_width(&req, 64);
+    xed_encoder_request_set_effective_operand_width(&req, eow);
 
     internal_requests.push_back(req);
 

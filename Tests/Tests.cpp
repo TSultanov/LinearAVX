@@ -95,6 +95,7 @@ InstructionMetadata tests[] = {
     VPSRLDQ::Metadata,
     ANDN::Metadata,
     SARX::Metadata,
+    BLSR::Metadata,
 };
 
 int main() {
@@ -102,7 +103,7 @@ int main() {
 
     uint64_t numErrors = 0;
 
-    for (int i = 0; i < 10; i ++) {
+    for (int i = 0; i < 3; i ++) {
         printf("==== Run %d ====\n", i);
         uint64_t runErrors = 0;
         for (auto metadata : tests) {

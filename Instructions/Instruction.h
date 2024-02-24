@@ -64,6 +64,8 @@ protected:
     void push(xed_encoder_operand_t op0);
     void push(xed_reg_enum_t reg);
     void pop(xed_reg_enum_t reg);
+    void popf();
+    void pushf();
     void ret();
     void sub(xed_reg_enum_t reg, int8_t immediate);
     void add(xed_reg_enum_t reg, int8_t immediate);
@@ -158,6 +160,8 @@ protected:
     void shr(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void sar(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void and_i(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void or_i(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void test_i(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void not_i(xed_encoder_operand_t op0);
     void call(xed_encoder_operand_t op);
 

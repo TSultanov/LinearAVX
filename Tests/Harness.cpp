@@ -477,12 +477,21 @@ bool TestResult::printResult() const {
         switch (nativeReg.regClass) {
             case XED_REG_CLASS_GPR:
             case XED_REG_CLASS_GPR64:
-            case XED_REG_CLASS_FLAGS:
             {
                 if (nativeReg.v.value64 != translatedReg.v.value64) {
                     printf("Register %s\n", xed_reg_enum_t2str(nativeReg.reg));
                     printf("Native: %016lx\n", nativeReg.v.value64);
                     printf("Transl: %016lx\n", translatedReg.v.value64);
+                    ret = true;
+                }
+                break;
+            }
+            case XED_REG_CLASS_FLAGS:
+            {
+                if (nativeReg.v.value64 != translatedReg.v.value64) {
+                    printf("Register %s\n", xed_reg_enum_t2str(nativeReg.reg));
+                    printf("Native: %032lb\n", nativeReg.v.value64);
+                    printf("Transl: %032lb\n", translatedReg.v.value64);
                     ret = true;
                 }
                 break;

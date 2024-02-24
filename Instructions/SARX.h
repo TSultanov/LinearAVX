@@ -75,6 +75,7 @@ private:
     }
 
     void implementation(bool upper, bool compile_inline) {
+        pushf();
         std::optional<xed_reg_enum_t> rcxSubst;
         std::optional<xed_reg_enum_t> original;
         for (auto & op : operands) {
@@ -136,5 +137,6 @@ private:
             pop(*rcxSubst);
             returnReg(*rcxSubst);
         }
+        popf();
     }
 };
