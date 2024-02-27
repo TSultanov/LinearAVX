@@ -106,6 +106,10 @@ InstructionMetadata tests[] = {
     VPSIGNB::Metadata,
     VPSIGNW::Metadata,
     VPSIGND::Metadata,
+    VPCMPGTB::Metadata,
+    VPCMPGTW::Metadata,
+    VPCMPGTD::Metadata,
+    VPCMPGTQ::Metadata,
 };
 
 int main() {

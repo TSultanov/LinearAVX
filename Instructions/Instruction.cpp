@@ -519,6 +519,22 @@ void Instruction::psignd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_PSIGND, op0, op1);
 }
 
+void Instruction::pcmpgtb(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PCMPGTB, op0, op1);
+}
+
+void Instruction::pcmpgtw(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PCMPGTW, op0, op1);
+}
+
+void Instruction::pcmpgtd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PCMPGTD, op0, op1);
+}
+
+void Instruction::pcmpgtq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PCMPGTQ, op0, op1);
+}
+
 void Instruction::pmovmskb(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_PMOVMSKB, op0, op1);
 }

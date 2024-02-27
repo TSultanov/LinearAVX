@@ -99,6 +99,10 @@
 #include "VPSIGNB.h"
 #include "VPSIGNW.h"
 #include "VPSIGND.h"
+#include "VPCMPGTB.h"
+#include "VPCMPGTW.h"
+#include "VPCMPGTD.h"
+#include "VPCMPGTQ.h"
 #include <map>
 
 #ifdef __cplusplus
@@ -216,6 +220,10 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VPSIGNB),
     ICLASSMAP(VPSIGNW),
     ICLASSMAP(VPSIGND),
+    ICLASSMAP(VPCMPGTB),
+    ICLASSMAP(VPCMPGTW),
+    ICLASSMAP(VPCMPGTD),
+    ICLASSMAP(VPCMPGTQ),
 };
 
 inline void printSupportedInstructions() {

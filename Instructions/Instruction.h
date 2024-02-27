@@ -140,6 +140,10 @@ protected:
     void psignb(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void psignw(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void psignd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void pcmpgtb(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void pcmpgtw(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void pcmpgtd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void pcmpgtq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void pmovmskb(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void blendvpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvttss2si(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
