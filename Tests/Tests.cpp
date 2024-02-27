@@ -98,6 +98,7 @@ InstructionMetadata tests[] = {
     BLSR::Metadata,
     VMOVHPD::Metadata,
     VMOVHPS::Metadata,
+    VPBROADCASTB::Metadata,
 };
 
 int main() {

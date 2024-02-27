@@ -91,6 +91,7 @@
 #include "BLSR.h"
 #include "VMOVHPD.h"
 #include "VMOVHPS.h"
+#include "VPBROADCASTB.h"
 #include <map>
 
 #ifdef __cplusplus
@@ -200,6 +201,7 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(BLSR),
     ICLASSMAP(VMOVHPD),
     ICLASSMAP(VMOVHPS),
+    ICLASSMAP(VPBROADCASTB),
 };
 
 inline void printSupportedInstructions() {
