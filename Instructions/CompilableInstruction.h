@@ -25,6 +25,10 @@ protected:
         }
     }
 
+    xed_reg_enum_t to32bitGpr(xed_reg_enum_t reg) {
+        return (xed_reg_enum_t)(reg - XED_REG_RAX + XED_REG_EAX);
+    }
+
     std::vector<xed_encoder_request_t> const& compile(CompilationStrategy compilationStrategy, uint64_t returnAddr = 0) {
         internal_requests.clear();
 

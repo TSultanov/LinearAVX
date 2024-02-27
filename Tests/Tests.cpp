@@ -102,6 +102,7 @@ InstructionMetadata tests[] = {
     VPCMPEQD::Metadata,
     VPCMPEQW::Metadata,
     VPCMPEQB::Metadata,
+    VPMOVMSKB::Metadata,
 };
 
 int main() {

@@ -507,6 +507,10 @@ void Instruction::pcmpeqb(xed_encoder_operand_t op0, xed_encoder_operand_t op1) 
     op2(XED_ICLASS_PCMPEQB, op0, op1);
 }
 
+void Instruction::pmovmskb(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PMOVMSKB, op0, op1);
+}
+
 void Instruction::blendvpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_BLENDVPD, op0, op1);
 }

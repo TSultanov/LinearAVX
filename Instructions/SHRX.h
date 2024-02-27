@@ -40,10 +40,6 @@ public:
     };
 private:
 
-    xed_reg_enum_t to32bitGpr(xed_reg_enum_t reg) {
-        return (xed_reg_enum_t)(reg - XED_REG_RAX + XED_REG_EAX);
-    }
-
     xed_encoder_operand_t substRcx(xed_encoder_operand_t op, std::optional<xed_reg_enum_t>  subst) {
         if (!subst.has_value()) {
             return op;
