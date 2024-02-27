@@ -507,6 +507,18 @@ void Instruction::pcmpeqb(xed_encoder_operand_t op0, xed_encoder_operand_t op1) 
     op2(XED_ICLASS_PCMPEQB, op0, op1);
 }
 
+void Instruction::psignb(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PSIGNB, op0, op1);
+}
+
+void Instruction::psignw(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PSIGNW, op0, op1);
+}
+
+void Instruction::psignd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PSIGND, op0, op1);
+}
+
 void Instruction::pmovmskb(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_PMOVMSKB, op0, op1);
 }
