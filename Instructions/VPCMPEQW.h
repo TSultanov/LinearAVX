@@ -1,11 +1,11 @@
 #include "CompilableInstruction.h"
 
-class VPCMPEQQ : public CompilableInstruction<VPCMPEQQ> {
+class VPCMPEQW : public CompilableInstruction<VPCMPEQW> {
 public:
-    VPCMPEQQ(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd) : CompilableInstruction(rip, ilen, xedd) {}
+    VPCMPEQW(uint64_t rip, uint8_t ilen, xed_decoded_inst_t xedd) : CompilableInstruction(rip, ilen, xedd) {}
 
     static const inline InstructionMetadata Metadata = {
-        .iclass = XED_ICLASS_VPCMPEQQ,
+        .iclass = XED_ICLASS_VPCMPEQW,
         .operandSets = {
             { 
                 .vectorLength = 128,
@@ -37,7 +37,7 @@ public:
 private:
     void implementation(bool upper, bool compile_inline) {
         map3opto2op(upper, [&](xed_encoder_operand_t const& op0, xed_encoder_operand_t const& op1) {
-            pcmpeqq(op0, op1);
+            pcmpeqw(op0, op1);
         });
 
         if (operands[0].isXmm()) {

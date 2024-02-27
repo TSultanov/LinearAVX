@@ -134,6 +134,9 @@ protected:
     void unpckhps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void unpcklps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void pcmpeqq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void pcmpeqd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void pcmpeqw(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void pcmpeqb(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void blendvpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvttss2si(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvttsd2si(xed_encoder_operand_t op0, xed_encoder_operand_t op1);

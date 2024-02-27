@@ -495,6 +495,18 @@ void Instruction::pcmpeqq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) 
     op2(XED_ICLASS_PCMPEQQ, op0, op1);
 }
 
+void Instruction::pcmpeqd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PCMPEQD, op0, op1);
+}
+
+void Instruction::pcmpeqw(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PCMPEQW, op0, op1);
+}
+
+void Instruction::pcmpeqb(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PCMPEQB, op0, op1);
+}
+
 void Instruction::blendvpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_BLENDVPD, op0, op1);
 }
