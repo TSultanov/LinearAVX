@@ -117,7 +117,7 @@ InstructionMetadata tests[] = {
     VPSUBW::Metadata,
     VPSUBB::Metadata,
     VSTMXCSR::Metadata,
-    VLDMXCSR::Metadata,
+    // VLDMXCSR::Metadata, // TODO: memory need to have proper data before executing instruction
     VBLENDVPS::Metadata,
 };
 
