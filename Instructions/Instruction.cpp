@@ -399,6 +399,22 @@ void Instruction::pand(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_PAND, op0, op1);
 }
 
+void Instruction::psubq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PSUBQ, op0, op1);
+}
+
+void Instruction::psubd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PSUBD, op0, op1);
+}
+
+void Instruction::psubw(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PSUBW, op0, op1);
+}
+
+void Instruction::psubb(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PSUBB, op0, op1);
+}
+
 void Instruction::por(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_POR, op0, op1);
 }
@@ -543,6 +559,10 @@ void Instruction::blendvpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1)
     op2(XED_ICLASS_BLENDVPD, op0, op1);
 }
 
+void Instruction::blendvps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_BLENDVPS, op0, op1);
+}
+
 void Instruction::cvttss2si(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_CVTTSS2SI, op0, op1);
 }
@@ -569,6 +589,10 @@ void Instruction::andnps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
 
 void Instruction::psllq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_PSLLQ, op0, op1);
+}
+
+void Instruction::psrlq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PSRLQ, op0, op1);
 }
 
 void Instruction::psrldq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
@@ -657,6 +681,14 @@ void Instruction::pshufb(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
 
 void Instruction::cmppd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
     op3(XED_ICLASS_CMPPD, op0, op1, op2);
+}
+
+void Instruction::stmxcsr(xed_encoder_operand_t op0) {
+    op1(XED_ICLASS_STMXCSR, op0);
+}
+
+void Instruction::ldmxcsr(xed_encoder_operand_t op0) {
+    op1(XED_ICLASS_LDMXCSR, op0);
 }
 
 void Instruction::call(xed_encoder_operand_t op) {

@@ -174,7 +174,7 @@ void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
         debug_print("YMM15: %llx %llx ", buff[0], buff[1]);
         memcpy(buff, &uc->uc_mcontext->__fs.__fpu_xmm15, sizeof(uc->uc_mcontext->__fs.__fpu_xmm15));
         debug_print("XMM15: %llx %llx\n", buff[0], buff[1]);
-        // exit(1);
+        exit(1);
     }
     if (result) {
         // set RIP one byte further

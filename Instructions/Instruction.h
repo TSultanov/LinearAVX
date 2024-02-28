@@ -114,6 +114,10 @@ protected:
     void pinsrq(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
     void comiss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void comisd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void psubq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void psubd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void psubw(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void psubb(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void pand(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void por(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void psrld(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
@@ -146,6 +150,7 @@ protected:
     void pcmpgtq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void pmovmskb(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void blendvpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void blendvps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvttss2si(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvttsd2si(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void andpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
@@ -153,6 +158,7 @@ protected:
     void andnpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void andnps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void psllq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void psrlq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void psrldq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cmppd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
     void movmskps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
@@ -177,6 +183,8 @@ protected:
     void test_i(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void not_i(xed_encoder_operand_t op0);
     void call(xed_encoder_operand_t op);
+    void stmxcsr(xed_encoder_operand_t op);
+    void ldmxcsr(xed_encoder_operand_t op);
 
     void op3(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
     void op2(xed_iclass_enum_t instr, xed_encoder_operand_t op0, xed_encoder_operand_t op1);

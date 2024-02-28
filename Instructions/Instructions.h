@@ -86,7 +86,7 @@
 #include "VPADDD.h"
 #include "VPADDW.h"
 #include "VPADDQ.h"
-#include "VPSRLQ.h"
+#include "VPSRLDQ.h"
 #include "SARX.h"
 #include "BLSR.h"
 #include "VMOVHPD.h"
@@ -103,6 +103,15 @@
 #include "VPCMPGTW.h"
 #include "VPCMPGTD.h"
 #include "VPCMPGTQ.h"
+#include "VPSRLQ.h"
+#include "VPAND.h"
+#include "VPSUBQ.h"
+#include "VPSUBD.h"
+#include "VPSUBW.h"
+#include "VPSUBB.h"
+#include "VSTMXCSR.h"
+#include "VLDMXCSR.h"
+#include "VBLENDVPS.h"
 #include <map>
 
 #ifdef __cplusplus
@@ -224,6 +233,15 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VPCMPGTW),
     ICLASSMAP(VPCMPGTD),
     ICLASSMAP(VPCMPGTQ),
+    ICLASSMAP(VPSRLQ),
+    ICLASSMAP(VPAND),
+    ICLASSMAP(VPSUBQ),
+    ICLASSMAP(VPSUBD),
+    ICLASSMAP(VPSUBW),
+    ICLASSMAP(VPSUBB),
+    ICLASSMAP(VSTMXCSR),
+    ICLASSMAP(VLDMXCSR),
+    ICLASSMAP(VBLENDVPS),
 };
 
 inline void printSupportedInstructions() {
