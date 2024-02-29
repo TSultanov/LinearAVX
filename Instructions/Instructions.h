@@ -128,6 +128,7 @@
 #include "VRCPPS.h"
 #include "VPTEST.h"
 #include "VCMPSD.h"
+#include "AND.h"
 #include <map>
 
 #ifdef __cplusplus
@@ -274,6 +275,7 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VRCPPS),
     ICLASSMAP(VPTEST),
     ICLASSMAP(VCMPSD),
+    ICLASSMAP(AND),
 };
 
 inline void printSupportedInstructions() {

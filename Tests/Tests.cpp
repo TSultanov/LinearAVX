@@ -135,6 +135,7 @@ InstructionMetadata tests[] = {
     VRCPPS::Metadata,
     VPTEST::Metadata,
     VCMPSD::Metadata,
+    AND::Metadata,
 };
 
 int main() {
