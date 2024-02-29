@@ -119,6 +119,22 @@ InstructionMetadata tests[] = {
     VSTMXCSR::Metadata,
     // VLDMXCSR::Metadata, // TODO: memory need to have proper data before executing instruction
     VBLENDVPS::Metadata,
+    VSUBSS::Metadata,
+    VSUBSD::Metadata,
+    VDPPS::Metadata,
+    VDPPD::Metadata,
+    VORPS::Metadata,
+    VORPD::Metadata,
+    VCVTTPS2DQ::Metadata,
+    VROUNDPS::Metadata,
+    VROUNDPD::Metadata,
+    VPANDN::Metadata,
+    VCMPPS::Metadata,
+    VBLENDPS::Metadata,
+    VBLENDPD::Metadata,
+    VRCPPS::Metadata,
+    VPTEST::Metadata,
+    VCMPSD::Metadata,
 };
 
 int main() {

@@ -112,6 +112,22 @@
 #include "VSTMXCSR.h"
 #include "VLDMXCSR.h"
 #include "VBLENDVPS.h"
+#include "VSUBSS.h"
+#include "VSUBSD.h"
+#include "VDPPS.h"
+#include "VDPPD.h"
+#include "VORPS.h"
+#include "VORPD.h"
+#include "VCVTTPS2DQ.h"
+#include "VROUNDPS.h"
+#include "VROUNDPD.h"
+#include "VPANDN.h"
+#include "VCMPPS.h"
+#include "VBLENDPS.h"
+#include "VBLENDPD.h"
+#include "VRCPPS.h"
+#include "VPTEST.h"
+#include "VCMPSD.h"
 #include <map>
 
 #ifdef __cplusplus
@@ -242,6 +258,22 @@ const std::map<xed_iclass_enum_t, instrFactory> iclassMapping = {
     ICLASSMAP(VSTMXCSR),
     ICLASSMAP(VLDMXCSR),
     ICLASSMAP(VBLENDVPS),
+    ICLASSMAP(VSUBSS),
+    ICLASSMAP(VSUBSD),
+    ICLASSMAP(VDPPS),
+    ICLASSMAP(VDPPD),
+    ICLASSMAP(VORPS),
+    ICLASSMAP(VORPD),
+    ICLASSMAP(VCVTTPS2DQ),
+    ICLASSMAP(VROUNDPS),
+    ICLASSMAP(VROUNDPD),
+    ICLASSMAP(VPANDN),
+    ICLASSMAP(VCMPPS),
+    ICLASSMAP(VBLENDPS),
+    ICLASSMAP(VBLENDPD),
+    ICLASSMAP(VRCPPS),
+    ICLASSMAP(VPTEST),
+    ICLASSMAP(VCMPSD),
 };
 
 inline void printSupportedInstructions() {

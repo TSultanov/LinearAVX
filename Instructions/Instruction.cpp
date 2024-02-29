@@ -315,6 +315,14 @@ void Instruction::xorpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_XORPD, op0, op1);
 }
 
+void Instruction::orps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_ORPS, op0, op1);
+}
+
+void Instruction::orpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_ORPD, op0, op1);
+}
+
 void Instruction::insertps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
     op3(XED_ICLASS_INSERTPS, op0, op1, op2);
 }
@@ -387,6 +395,22 @@ void Instruction::mulss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_MULSS, op0, op1);
 }
 
+void Instruction::subss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_SUBSS, op0, op1);
+}
+
+void Instruction::subsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_SUBSD, op0, op1);
+}
+
+void Instruction::dpps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_DPPS, op0, op1, op2);
+}
+
+void Instruction::dppd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_DPPD, op0, op1, op2);
+}
+
 void Instruction::mulpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_MULPD, op0, op1);
 }
@@ -397,6 +421,10 @@ void Instruction::mulps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
 
 void Instruction::pand(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_PAND, op0, op1);
+}
+
+void Instruction::pandn(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PANDN, op0, op1);
 }
 
 void Instruction::psubq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
@@ -437,6 +465,18 @@ void Instruction::cvtsi2ss(xed_encoder_operand_t op0, xed_encoder_operand_t op1)
 
 void Instruction::cvtsd2ss(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_CVTSD2SS, op0, op1);
+}
+
+void Instruction::cvttps2dq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_CVTTPS2DQ , op0, op1);
+}
+
+void Instruction::roundps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_ROUNDPS , op0, op1, op2);
+}
+
+void Instruction::roundpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_ROUNDPD , op0, op1, op2);
 }
 
 void Instruction::movq(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
@@ -679,8 +719,32 @@ void Instruction::pshufb(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
     op2(XED_ICLASS_PSHUFB, op0, op1);
 }
 
+void Instruction::ptest(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_PTEST, op0, op1);
+}
+
+void Instruction::rcpps(xed_encoder_operand_t op0, xed_encoder_operand_t op1) {
+    op2(XED_ICLASS_RCPPS, op0, op1);
+}
+
+void Instruction::cmpsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_CMPSD_XMM, op0, op1, op2);
+}
+
 void Instruction::cmppd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
     op3(XED_ICLASS_CMPPD, op0, op1, op2);
+}
+
+void Instruction::cmpps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_CMPPS, op0, op1, op2);
+}
+
+void Instruction::blendps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_BLENDPS, op0, op1, op2);
+}
+
+void Instruction::blendpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2) {
+    op3(XED_ICLASS_BLENDPD, op0, op1, op2);
 }
 
 void Instruction::stmxcsr(xed_encoder_operand_t op0) {

@@ -44,8 +44,8 @@ class Instruction {
 
 
 protected:
-    const uint32_t opWidth;
-    const xed_bits_t vl;
+    /*const*/ uint32_t opWidth;
+    /*const*/ xed_bits_t vl;
     std::unordered_set<xed_reg_enum_t> usedRegs;
     int64_t rspOffset = 0;
     const uint64_t rip;
@@ -88,6 +88,8 @@ protected:
     void xorps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void xorps_raw(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void xorpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void orps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void orpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void insertps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
     void addps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void addpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
@@ -99,6 +101,10 @@ protected:
     void addsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void mulsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void mulss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void subss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void subsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void dpps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
+    void dppd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
     void mulpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void mulps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void paddb(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
@@ -119,12 +125,16 @@ protected:
     void psubw(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void psubb(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void pand(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void pandn(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void por(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void psrld(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvtss2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvtsi2sd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvtsi2ss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void cvtsd2ss(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void cvttps2dq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void roundps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
+    void roundpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
     void shufps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
     void shufpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
     void pshufhw(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op3);
@@ -160,7 +170,13 @@ protected:
     void psllq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void psrlq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void psrldq(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void ptest(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void rcpps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
+    void cmpsd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
     void cmppd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
+    void cmpps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
+    void blendps(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
+    void blendpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1, xed_encoder_operand_t op2);
     void movmskps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movmskpd(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
     void movlhps(xed_encoder_operand_t op0, xed_encoder_operand_t op1);
