@@ -40,7 +40,5 @@ public:
 private:
     void implementation(bool upper, bool compile_inline) {
         ptest(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
-
-        zeroupperInternal(operands[0]);
     }
 };

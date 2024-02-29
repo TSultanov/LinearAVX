@@ -21,21 +21,7 @@ public:
                 { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_XMM },
                 { .operand = XED_ENCODER_OPERAND_TYPE_MEM },
                 { .operand = XED_ENCODER_OPERAND_TYPE_IMM0, .immBits = 8 }}
-            },
-            { 
-                .vectorLength = 256,
-                .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
-                { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
-                { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
-                { .operand = XED_ENCODER_OPERAND_TYPE_IMM0, .immBits = 8 }}
-            },
-            { 
-                .vectorLength = 256,
-                .operands = {{ .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
-                { .operand = XED_ENCODER_OPERAND_TYPE_REG, .regClass = XED_REG_CLASS_YMM },
-                { .operand = XED_ENCODER_OPERAND_TYPE_MEM },
-                { .operand = XED_ENCODER_OPERAND_TYPE_IMM0, .immBits = 8 }}
-            },
+            }
         }
     };
 private:

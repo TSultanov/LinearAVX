@@ -41,6 +41,8 @@ private:
     void implementation(bool upper, bool compile_inline) {
         rcpps(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
 
-        zeroupperInternal(operands[0]);
+        if (operands[0].isXmm()) {
+            zeroupperInternal(operands[0]);
+        }
     }
 };
