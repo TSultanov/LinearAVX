@@ -1,4 +1,4 @@
-use object::Object;
+use object::{Object, ObjectSection};
 use static_recompiler::{Config, TextDecoder};
 use std::{env, error::Error, fs};
 
@@ -14,13 +14,22 @@ fn main() -> Result<(), Box<dyn Error>> {
     let arch = file.architecture();
     println!("Arch: {:?}", arch);
 
+    let entry = file.entry();
+    println!("Entry address: {:#x}", entry);
+
     let base_address = file.relative_address_base();
     println!("Base address: {:#x}", base_address);
 
+    for s in file.sections() {
+        println!("{} at {:#x}", s.name()?, s.address());
+    }
+
     let text_decoder = TextDecoder::new(&file)?;
 
-    let block = text_decoder.decode_at(text_decoder.base_address)?;
-    block.pretty_print();
+    let blocks = text_decoder.decode_all_from(entry)?;
+    for block in blocks {
+        block.pretty_print();
+    }
 
     Ok(())
 }
