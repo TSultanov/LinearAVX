@@ -3,3 +3,4 @@ build/
 zig-cache/
 zig-out/
 target/
+.vscode/
