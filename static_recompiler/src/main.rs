@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let blocks = text_decoder.decode_all_from(entry)?;
     for block in blocks {
-        block.pretty_print();
+        block.value.pretty_print();
     }
 
     Ok(())
