@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use std::{
-    collections::{BTreeMap, HashMap, HashSet, VecDeque},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
     error::Error,
     ops::Range,
 };
@@ -65,7 +65,11 @@ impl<'a> TextDecoder<'_> {
         Ok(Self::merge_blocks(raw_blocks))
     }
 
-    pub fn decode_at(&self, addr: u64) -> Result<DecodedBlock, Box<dyn Error>> {
+    pub fn decode_at(
+        &self,
+        block_type: BlockType,
+        addr: u64,
+    ) -> Result<DecodedBlock, Box<dyn Error>> {
         let bytes = self.section.data()?;
 
         let position: usize = (addr - self.base_address).try_into().unwrap();
@@ -95,6 +99,7 @@ impl<'a> TextDecoder<'_> {
                     if instr.op0_kind() == iced_x86::OpKind::NearBranch64 {
                         let target = instr.near_branch_target();
                         branches.push(Branch {
+                            typ: BranchType::Jump,
                             from: instr.ip(),
                             to: target,
                         });
@@ -122,6 +127,7 @@ impl<'a> TextDecoder<'_> {
                 FlowControl::ConditionalBranch => {
                     if instr.op0_kind() == iced_x86::OpKind::NearBranch64 {
                         branches.push(Branch {
+                            typ: BranchType::Jump,
                             from: instr.ip(),
                             to: instr.near_branch_target(),
                         });
@@ -137,6 +143,7 @@ impl<'a> TextDecoder<'_> {
                 FlowControl::Call => match instr.op0_kind() {
                     iced_x86::OpKind::NearBranch64 => {
                         branches.push(Branch {
+                            typ: BranchType::Call,
                             from: instr.ip(),
                             to: instr.near_branch_target(),
                         });
@@ -181,7 +188,12 @@ impl<'a> TextDecoder<'_> {
             }
         }
 
-        Ok(DecodedBlock::new(instructions, Vec::new(), branches))
+        Ok(DecodedBlock::new(
+            block_type,
+            instructions,
+            Vec::new(),
+            branches,
+        ))
     }
 
     pub fn decode_from(&self, addr: u64) -> Result<HashMap<u64, DecodedBlock>, Box<dyn Error>> {
@@ -189,18 +201,22 @@ impl<'a> TextDecoder<'_> {
 
         let mut decode_queue = VecDeque::new();
 
-        decode_queue.push_back(addr);
+        decode_queue.push_back(Branch {
+            typ: BranchType::Call,
+            from: 0,
+            to: addr,
+        });
 
         while let Some(item) = decode_queue.pop_front() {
-            if hashmap.contains_key(&item) {
+            if hashmap.contains_key(&item.to) {
                 continue;
             }
 
-            let block = self.decode_at(item)?;
+            let block = self.decode_at(item.typ.into(), item.to)?;
             for t in &block.branch_targets {
-                decode_queue.push_back(t.to);
+                decode_queue.push_back(*t);
             }
-            hashmap.insert(item, block);
+            hashmap.insert(item.to, block);
         }
 
         return Ok(hashmap);
@@ -212,43 +228,87 @@ impl<'a> TextDecoder<'_> {
         let tree = IntervalTree::from_iter(blocks_iter);
 
         // Find intersections for blocks
-        let mut block_entry_points_to_process: HashSet<u64> =
-            HashSet::from_iter(blocks.keys().map(|k| *k).sorted());
+        let mut block_entry_points_to_process: BTreeSet<u64> =
+            BTreeSet::from_iter(blocks.keys().map(|k| *k).sorted());
 
-        let mut block_entry_points_to_process_iter = block_entry_points_to_process.drain();
+        // let mut block_entry_points_processed: HashSet<u64> = HashSet::new();
 
-        let mut block_entry_points_processed: HashSet<u64> = HashSet::new();
+        // let merged_blocks: Vec<DecodedBlock> = blocks.values().cloned().collect();
 
         let mut merged_blocks = Vec::new();
 
-        while let Some(ip) = block_entry_points_to_process_iter.next() {
-            if block_entry_points_processed.contains(&ip) {
-                continue;
-            }
-
+        while let Some(ip) = block_entry_points_to_process.first().cloned() {
             let blocks_containing_ip: Vec<_> = tree.query_point(ip).collect();
 
-            block_entry_points_processed.insert(ip);
-            for b in &blocks_containing_ip {
-                block_entry_points_processed.insert(b.range.start);
+            block_entry_points_to_process.remove(&ip);
+
+            let mut merged_block = MergeOrRebalanceResult::None;
+
+            for Element { range: _, value: b } in blocks_containing_ip {
+                match merged_block {
+                    MergeOrRebalanceResult::None => {
+                        block_entry_points_to_process.remove(&b.range.start);
+                        merged_block = MergeOrRebalanceResult::Single((*b).clone());
+                    }
+                    MergeOrRebalanceResult::Single(a) => {
+                        block_entry_points_to_process.remove(&a.range.start);
+                        block_entry_points_to_process.remove(&b.range.start);
+                        merged_block = a.merge(b);
+                    },
+                    MergeOrRebalanceResult::Two(a1, a2) => {
+                        block_entry_points_to_process.remove(&a1.range.start);
+                        block_entry_points_to_process.remove(&a2.range.start);
+                        block_entry_points_to_process.remove(&b.range.start);
+                        merged_blocks.push(a1);
+                        merged_block = a2.merge(b);
+                    }
+                }
             }
 
-            let merged_block =
-                blocks_containing_ip
-                    .iter()
-                    .fold(None, |acc: Option<DecodedBlock>, b| {
-                        if let Some(a) = acc {
-                            a.merge(b.value)
-                        } else {
-                            Some((*b.value).clone())
-                        }
-                    });
-            if let Some(block) = merged_block {
-                merged_blocks.push(block);
-            } else {
-                panic!("BUG: Tried to merge non-intersecting blocks");
+            match merged_block {
+                MergeOrRebalanceResult::None => {}
+                MergeOrRebalanceResult::Single(b) => merged_blocks.push(b),
+                MergeOrRebalanceResult::Two(a, b) => {
+                    merged_blocks.push(a);
+                    merged_blocks.push(b);
+                }
             }
         }
+
+        merged_blocks.sort_by_key(|b| b.range.start);
+        // Second pass: merge adjacent blocks if possible
+
+        let merged_blocks = if merged_blocks.len() > 1 {
+            merged_blocks.iter()
+            .fold(im::Vector::new(), |acc: im::Vector<DecodedBlock>, b| {
+                if let Some(a) = acc.last() {
+                    let mut acc_clone = acc.clone();
+
+                    match a.merge(b) {
+                        MergeOrRebalanceResult::None => {
+                            acc_clone.push_back((*b).clone());
+                        }
+                        MergeOrRebalanceResult::Single(m) => {
+                            acc_clone.pop_back();
+                            acc_clone.push_back(m);
+                        }
+                        MergeOrRebalanceResult::Two(m1, m2) => {
+                            acc_clone.pop_back();
+                            acc_clone.push_back(m1);
+                            acc_clone.push_back(m2);
+                        }
+                    }
+
+                    acc_clone
+                } else {
+                    let mut acc_clone = acc.clone();
+                    acc_clone.push_back((*b).clone());
+                    acc_clone
+                }
+            }).into_iter().collect()
+        } else {
+            merged_blocks
+        };
 
         // Construct backreferences
         let mut block_backrefs: BTreeMap<u64, HashSet<Branch>> = BTreeMap::new();
@@ -271,7 +331,12 @@ impl<'a> TextDecoder<'_> {
                 .map(|b| *b)
                 .collect();
 
-            DecodedBlock::new(block.instructions, backrefs, block.branch_targets)
+            DecodedBlock::new(
+                block.block_type,
+                block.instructions,
+                backrefs,
+                block.branch_targets,
+            )
         });
 
         IntervalTree::from_iter(blocks_with_backrefs)
@@ -279,14 +344,37 @@ impl<'a> TextDecoder<'_> {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
+pub enum BranchType {
+    Jump,
+    Call,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Branch {
+    pub typ: BranchType,
     pub from: u64,
     pub to: u64,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum BlockType {
+    Function,
+    Raw,
+}
+
+impl From<BranchType> for BlockType {
+    fn from(value: BranchType) -> Self {
+        match value {
+            BranchType::Call => BlockType::Function,
+            BranchType::Jump => BlockType::Raw,
+        }
+    }
 }
 
 #[derive(Clone)]
 pub struct DecodedBlock {
     instructions: Vec<iced_x86::Instruction>,
+    pub block_type: BlockType,
     pub branch_targets: Vec<Branch>,
     pub references: Vec<Branch>,
     pub range: Range<u64>,
@@ -310,8 +398,15 @@ impl From<DecodedBlock> for Element<u64, DecodedBlock> {
     }
 }
 
+pub enum MergeOrRebalanceResult {
+    None,
+    Single(DecodedBlock),
+    Two(DecodedBlock, DecodedBlock),
+}
+
 impl DecodedBlock {
     pub fn new(
+        block_type: BlockType,
         instructions: Vec<iced_x86::Instruction>,
         references: Vec<Branch>,
         branch_targets: Vec<Branch>,
@@ -324,8 +419,7 @@ impl DecodedBlock {
             .expect("Empty instruction list is unexpected");
         let max_address = instructions.iter().map(|i| i.ip()).max().unwrap();
         let last_instruction = instructions.iter().max_by_key(|i| i.ip()).unwrap();
-        let last_instruction_length: u64 = last_instruction.len().try_into().unwrap();
-        let next_instr_ip = last_instruction.ip() + last_instruction_length;
+        let next_instr_ip = last_instruction.next_ip();
 
         let mut branch_targets_filtered = Vec::new();
         for t in branch_targets {
@@ -335,6 +429,7 @@ impl DecodedBlock {
         }
 
         DecodedBlock {
+            block_type,
             instructions,
             branch_targets: branch_targets_filtered,
             references,
@@ -345,22 +440,71 @@ impl DecodedBlock {
         }
     }
 
-    pub fn merge(&self, other: &DecodedBlock) -> Option<DecodedBlock> {
+    pub fn merge(&self, other: &DecodedBlock) -> MergeOrRebalanceResult {
         let left_block = if self.range.start <= other.range.start {
             &self
         } else {
             &other
         };
 
-        let right_block = if self.range.end >= other.range.end {
+        let right_block = if self.range.start >= other.range.start {
             &self
         } else {
             &other
         };
 
-        if left_block.range.end < right_block.range.start {
-            return None;
+        if left_block.range.start <= right_block.range.start && left_block.range.end >= right_block.range.end {
+            return MergeOrRebalanceResult::Single((*left_block).clone());
         }
+
+        if left_block.range.end < right_block.range.start {
+            return MergeOrRebalanceResult::None;
+        }
+
+        // if right_block.block_type == BlockType::Raw {
+        //     if left_block.range.start < right_block.range.start
+        //         && left_block.range.end == right_block.range.end
+        //     {
+        //         // In such case we probably have some jump table errorneously interpreted as a single function
+
+        //         let left_range = Range {
+        //             start: left_block.range.start,
+        //             end: right_block.range.start,
+        //         };
+
+        //         let left_instructions = left_block
+        //             .instructions
+        //             .iter()
+        //             .filter(|i| left_range.contains(&i.ip()))
+        //             .map(|i| *i)
+        //             .collect();
+
+        //         let left_branches = left_block
+        //             .branch_targets
+        //             .iter()
+        //             .filter(|b| left_range.contains(&b.from))
+        //             .map(|b| *b)
+        //             .collect();
+
+        //         let left_refs = left_block
+        //             .references
+        //             .iter()
+        //             .filter(|r| left_range.contains(&r.to))
+        //             .map(|b| *b)
+        //             .collect();
+
+        //         let left_block_new = DecodedBlock::new(
+        //             left_block.block_type,
+        //             left_instructions,
+        //             left_refs,
+        //             left_branches,
+        //         );
+
+        //         return MergeOrRebalanceResult::Two(left_block_new, (**right_block).clone());
+        //     }
+
+        //     return MergeOrRebalanceResult::Two((**left_block).clone(), (**right_block).clone());
+        // }
 
         let new_range = Range {
             start: left_block.range.start,
@@ -397,7 +541,8 @@ impl DecodedBlock {
             .unique()
             .collect();
 
-        Some(DecodedBlock::new(
+        MergeOrRebalanceResult::Single(DecodedBlock::new(
+            left_block.block_type,
             instuctions_new,
             references_new,
             branch_targets_new,
@@ -413,7 +558,13 @@ impl DecodedBlock {
 
         let mut output = String::new();
 
-        println!("\nFunction at {:#x}:", self.instructions[0].ip());
+        println!(
+            "\nBlock type {:?} at {:#x} [{:#x} - {:#x}):",
+            self.block_type,
+            self.instructions[0].ip(),
+            self.range.start,
+            self.range.end,
+        );
 
         for instr in &self.instructions {
             output.clear();

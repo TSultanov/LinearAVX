@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 iced-x86 = "1.21.0"
+im = "15.1.0"
 intervaltree = "0.2.7"
 itertools = "0.12.1"
 object = "0.33.0"
