@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 default-members = [ "launcher", ]
-members = [
+members = [ "common",
     "launcher",
     "static_recompiler",
 ]

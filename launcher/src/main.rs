@@ -1,9 +1,10 @@
 use std::{env, mem::MaybeUninit};
+use common::debugger::debug_loop;
 use windows::{
     core::{HSTRING, PWSTR},
     Win32::{
         Foundation::CloseHandle,
-        System::Threading::{CreateProcessW, WaitForSingleObject, INFINITE, PROCESS_CREATION_FLAGS, STARTUPINFOW},
+        System::Threading::{CreateProcessW, CREATE_SUSPENDED, DEBUG_PROCESS, STARTUPINFOW},
     },
 };
 
@@ -31,7 +32,7 @@ fn main() {
             None,
             None,
             false,
-            /*CREATE_SUSPENDED | DEBUG_PROCESS*/ PROCESS_CREATION_FLAGS(0),
+            /*CREATE_SUSPENDED |*/ DEBUG_PROCESS,
             None,
             None,
             si.as_mut_ptr(),
@@ -44,9 +45,10 @@ fn main() {
         let pi_init = pi.assume_init();
         let _ = si.assume_init();
 
-        WaitForSingleObject(pi_init.hProcess, INFINITE);
+        // WaitForSingleObject(pi_init.hProcess, INFINITE);
+        debug_loop();
 
-        let _ = CloseHandle(pi_init.hProcess);
-        let _ = CloseHandle(pi_init.hThread);
+        CloseHandle(pi_init.hProcess).expect("Failed to close process");
+        CloseHandle(pi_init.hThread).expect("Failed to close thread");
     }
 }
