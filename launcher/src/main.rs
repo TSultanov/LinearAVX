@@ -1,10 +1,10 @@
-use std::{env, mem::MaybeUninit};
-use common::debugger::DebuggerCore;
+use std::{env, error::Error, mem::MaybeUninit};
+use common::debugger::{DebuggerCore, ProcessCreatedData};
 use windows::{
     core::{HSTRING, PWSTR},
     Win32::{
         Foundation::CloseHandle,
-        System::Threading::{CreateProcessW, DEBUG_PROCESS, STARTUPINFOW},
+        System::{Diagnostics::Debug::CREATE_PROCESS_DEBUG_INFO, Threading::{CreateProcessW, DEBUG_PROCESS, STARTUPINFOW}},
     },
 };
 
@@ -46,10 +46,19 @@ fn main() {
         let _ = si.assume_init();
 
         // WaitForSingleObject(pi_init.hProcess, INFINITE);
-        let mut debugger = DebuggerCore::new();
+        let mut debugger = DebuggerCore::new(Box::new(proc_created_handler));
         debugger.debug_loop();
 
         CloseHandle(pi_init.hProcess).expect("Failed to close process");
         CloseHandle(pi_init.hThread).expect("Failed to close thread");
     }
+}
+
+fn proc_created_handler(data: ProcessCreatedData) -> Result<(), Box<dyn Error>> {
+    println!("Base address {:#x}", data.base_address);
+    println!("Entry point {:#x}", data.entry_point);
+
+    let entry = data.read_memory.as_ref()(data.entry_point, 1024)?;
+
+    Ok(())
 }

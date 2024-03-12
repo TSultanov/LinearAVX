@@ -4,163 +4,34 @@ use std::{
     ops::Range,
 };
 
-use iced_x86::{FlowControl, Formatter};
+use iced_x86::{FlowControl, Formatter, Instruction};
 use intervaltree::{Element, IntervalTree};
 use itertools::Itertools;
 
 pub struct TextDecoder<'a> {
     pub base_address: u64,
     bitness: u32,
-    data: &'a [u8]
+    data: &'a [u8],
 }
 
-impl<'a> TextDecoder<'_> {
-    pub fn new(bitness: u32, base_address: u64, data: &'a [u8]) -> Result<TextDecoder<'a>, Box<dyn Error>> {
-        Ok(TextDecoder {
-            base_address: base_address,
-            bitness: bitness,
-            data: data,
-        })
-    }
+#[derive(PartialEq, Eq)]
+pub enum DecodeContinue {
+    Break,
+    Continue,
+}
 
-    pub fn decode_all_from(
+pub trait Decoder {
+    fn decode_at(&self, block_type: BlockType, addr: u64) -> Result<DecodedBlock, Box<dyn Error>>;
+
+    fn decode_all_from(
         &self,
         addr: u64,
     ) -> Result<IntervalTree<u64, DecodedBlock>, Box<dyn Error>> {
         let raw_blocks = self.decode_from(addr)?;
-        Ok(Self::merge_blocks(raw_blocks))
+        Ok(merge_blocks(raw_blocks))
     }
 
-    pub fn decode_at(
-        &self,
-        block_type: BlockType,
-        addr: u64,
-    ) -> Result<DecodedBlock, Box<dyn Error>> {
-        let position: usize = (addr - self.base_address).try_into().unwrap();
-
-        let decoder = iced_x86::Decoder::with_ip(
-            self.bitness,
-            &self.data[position..],
-            addr,
-            iced_x86::DecoderOptions::NONE,
-        );
-
-        let mut instructions = Vec::new();
-
-        let mut branches: Vec<Branch> = Vec::new();
-
-        for instr in decoder {
-            instructions.push(instr);
-
-            match instr.flow_control() {
-                FlowControl::Next => {}
-
-                FlowControl::Return => {
-                    break;
-                }
-
-                FlowControl::UnconditionalBranch => {
-                    if instr.op0_kind() == iced_x86::OpKind::NearBranch64 {
-                        let target = instr.near_branch_target();
-                        branches.push(Branch {
-                            typ: BranchType::Jump,
-                            from: instr.ip(),
-                            to: target,
-                        });
-                        break;
-                    }
-                    panic!(
-                        "UnconditionalBranch with op kind {:?} not supported (IP {:#x})",
-                        instr.op0_kind(),
-                        instr.ip()
-                    );
-                }
-
-                FlowControl::IndirectBranch => match instr.op0_kind() {
-                    iced_x86::OpKind::Memory => {}
-                    iced_x86::OpKind::Register => {}
-                    _ => {
-                        panic!(
-                            "IndirectBranch with op kind {:?} not supported (IP {:#x})",
-                            instr.op0_kind(),
-                            instr.ip()
-                        );
-                    }
-                },
-
-                FlowControl::ConditionalBranch => {
-                    if instr.op0_kind() == iced_x86::OpKind::NearBranch64 {
-                        branches.push(Branch {
-                            typ: BranchType::Jump,
-                            from: instr.ip(),
-                            to: instr.near_branch_target(),
-                        });
-                    } else {
-                        panic!(
-                            "ConditionalBranch with op kind {:?} not supported (IP {:#x})",
-                            instr.op0_kind(),
-                            instr.ip()
-                        );
-                    }
-                }
-
-                FlowControl::Call => match instr.op0_kind() {
-                    iced_x86::OpKind::NearBranch64 => {
-                        branches.push(Branch {
-                            typ: BranchType::Call,
-                            from: instr.ip(),
-                            to: instr.near_branch_target(),
-                        });
-                    }
-                    _ => {
-                        panic!(
-                            "Call with op kind {:?} not supported (IP {:#x})",
-                            instr.op0_kind(),
-                            instr.ip()
-                        );
-                    }
-                },
-
-                FlowControl::IndirectCall => match instr.op0_kind() {
-                    iced_x86::OpKind::Memory => {}
-                    iced_x86::OpKind::Register => {}
-                    _ => {
-                        panic!(
-                            "IndirectCall with op kind {:?} not supported (IP {:#x})",
-                            instr.op0_kind(),
-                            instr.ip()
-                        );
-                    }
-                },
-                FlowControl::Interrupt => match instr.mnemonic() {
-                    iced_x86::Mnemonic::Int3 => {
-                        break;
-                    }
-                    _ => match instr.op0_kind() {
-                        iced_x86::OpKind::Immediate8 => {}
-                        _ => panic!(
-                            "Interrupt with op kind {:?} not supported (IP {:#x})",
-                            instr.op0_kind(),
-                            instr.ip()
-                        ),
-                    },
-                },
-                FlowControl::XbeginXabortXend => {
-                    panic!("XbeginXabortXend not supported (ID {:#x})", instr.ip());
-                }
-                FlowControl::Exception => panic!("Exception! (ID {:#x})", instr.ip()),
-            }
-        }
-
-        Ok(DecodedBlock::new(
-            block_type,
-            instructions,
-            Vec::new(),
-            branches,
-        ))
-    }
-
-    pub fn decode_from(&self, addr: u64) -> Result<HashMap<u64, DecodedBlock>, Box<dyn Error>> {
+    fn decode_from(&self, addr: u64) -> Result<HashMap<u64, DecodedBlock>, Box<dyn Error>> {
         let mut hashmap = HashMap::new();
 
         let mut decode_queue = VecDeque::new();
@@ -186,128 +57,276 @@ impl<'a> TextDecoder<'_> {
         return Ok(hashmap);
     }
 
-    fn merge_blocks(blocks: HashMap<u64, DecodedBlock>) -> IntervalTree<u64, DecodedBlock> {
-        let blocks_iter = blocks.values();
+    fn process_branch_instr(
+        instr: Instruction,
+    ) -> Result<(DecodeContinue, Option<Vec<Branch>>), String> {
+        let mut branches = Vec::new();
+        match instr.flow_control() {
+            FlowControl::Next => Ok((DecodeContinue::Continue, None)),
 
-        let tree = IntervalTree::from_iter(blocks_iter);
+            FlowControl::Return => Ok((DecodeContinue::Break, None)),
 
-        // Find intersections for blocks
-        let mut block_entry_points_to_process: BTreeSet<u64> =
-            BTreeSet::from_iter(blocks.keys().map(|k| *k).sorted());
-
-        // let mut block_entry_points_processed: HashSet<u64> = HashSet::new();
-
-        // let merged_blocks: Vec<DecodedBlock> = blocks.values().cloned().collect();
-
-        let mut merged_blocks = Vec::new();
-
-        while let Some(ip) = block_entry_points_to_process.first().cloned() {
-            let blocks_containing_ip: Vec<_> = tree.query_point(ip).collect();
-
-            block_entry_points_to_process.remove(&ip);
-
-            let mut merged_block = MergeOrRebalanceResult::None;
-
-            for Element { range: _, value: b } in blocks_containing_ip {
-                match merged_block {
-                    MergeOrRebalanceResult::None => {
-                        block_entry_points_to_process.remove(&b.range.start);
-                        merged_block = MergeOrRebalanceResult::Single((*b).clone());
-                    }
-                    MergeOrRebalanceResult::Single(a) => {
-                        block_entry_points_to_process.remove(&a.range.start);
-                        block_entry_points_to_process.remove(&b.range.start);
-                        merged_block = a.merge(b);
-                    }
-                    MergeOrRebalanceResult::Two(a1, a2) => {
-                        block_entry_points_to_process.remove(&a1.range.start);
-                        block_entry_points_to_process.remove(&a2.range.start);
-                        block_entry_points_to_process.remove(&b.range.start);
-                        merged_blocks.push(a1);
-                        merged_block = a2.merge(b);
-                    }
+            FlowControl::UnconditionalBranch => {
+                if instr.op0_kind() == iced_x86::OpKind::NearBranch64 {
+                    let target = instr.near_branch_target();
+                    branches.push(Branch {
+                        typ: BranchType::Jump,
+                        from: instr.ip(),
+                        to: target,
+                    });
+                    return Ok((DecodeContinue::Break, Some(branches)));
                 }
+                Err(format!(
+                    "UnconditionalBranch with op kind {:?} not supported (IP {:#x})",
+                    instr.op0_kind(),
+                    instr.ip()
+                ))
             }
 
-            match merged_block {
-                MergeOrRebalanceResult::None => {}
-                MergeOrRebalanceResult::Single(b) => merged_blocks.push(b),
-                MergeOrRebalanceResult::Two(a, b) => {
-                    merged_blocks.push(a);
-                    merged_blocks.push(b);
-                }
-            }
-        }
+            FlowControl::IndirectBranch => match instr.op0_kind() {
+                iced_x86::OpKind::Memory => Ok((DecodeContinue::Continue, None)),
+                iced_x86::OpKind::Register => Ok((DecodeContinue::Continue, None)),
+                _ => Err(format!(
+                    "IndirectBranch with op kind {:?} not supported (IP {:#x})",
+                    instr.op0_kind(),
+                    instr.ip()
+                )),
+            },
 
-        merged_blocks.sort_by_key(|b| b.range.start);
-        // Second pass: merge adjacent blocks if possible
+            FlowControl::ConditionalBranch => {
+                if instr.op0_kind() == iced_x86::OpKind::NearBranch64 {
+                    branches.push(Branch {
+                        typ: BranchType::Jump,
+                        from: instr.ip(),
+                        to: instr.near_branch_target(),
+                    });
 
-        let merged_blocks = if merged_blocks.len() > 1 {
-            merged_blocks
-                .iter()
-                .fold(im::Vector::new(), |acc: im::Vector<DecodedBlock>, b| {
-                    if let Some(a) = acc.last() {
-                        let mut acc_clone = acc.clone();
-
-                        match a.merge(b) {
-                            MergeOrRebalanceResult::None => {
-                                acc_clone.push_back((*b).clone());
-                            }
-                            MergeOrRebalanceResult::Single(m) => {
-                                acc_clone.pop_back();
-                                acc_clone.push_back(m);
-                            }
-                            MergeOrRebalanceResult::Two(m1, m2) => {
-                                acc_clone.pop_back();
-                                acc_clone.push_back(m1);
-                                acc_clone.push_back(m2);
-                            }
-                        }
-
-                        acc_clone
-                    } else {
-                        let mut acc_clone = acc.clone();
-                        acc_clone.push_back((*b).clone());
-                        acc_clone
-                    }
-                })
-                .into_iter()
-                .collect()
-        } else {
-            merged_blocks
-        };
-
-        // Construct backreferences
-        let mut block_backrefs: BTreeMap<u64, HashSet<Branch>> = BTreeMap::new();
-        for block in &merged_blocks {
-            for branch in &block.branch_targets {
-                if let Some(backrefs) = block_backrefs.get_mut(&branch.to) {
-                    backrefs.insert(*branch);
+                    Ok((DecodeContinue::Continue, Some(branches)))
                 } else {
-                    block_backrefs.insert(branch.to, HashSet::from_iter(vec![*branch]));
+                    Err(format!(
+                        "ConditionalBranch with op kind {:?} not supported (IP {:#x})",
+                        instr.op0_kind(),
+                        instr.ip()
+                    ))
+                }
+            }
+
+            FlowControl::Call => match instr.op0_kind() {
+                iced_x86::OpKind::NearBranch64 => {
+                    branches.push(Branch {
+                        typ: BranchType::Call,
+                        from: instr.ip(),
+                        to: instr.near_branch_target(),
+                    });
+
+                    Ok((DecodeContinue::Continue, Some(branches)))
+                }
+                _ => Err(format!(
+                    "Call with op kind {:?} not supported (IP {:#x})",
+                    instr.op0_kind(),
+                    instr.ip()
+                )),
+            },
+
+            FlowControl::IndirectCall => match instr.op0_kind() {
+                iced_x86::OpKind::Memory => Ok((DecodeContinue::Continue, None)),
+                iced_x86::OpKind::Register => Ok((DecodeContinue::Continue, None)),
+                _ => Err(format!(
+                    "IndirectCall with op kind {:?} not supported (IP {:#x})",
+                    instr.op0_kind(),
+                    instr.ip()
+                )),
+            },
+            FlowControl::Interrupt => match instr.mnemonic() {
+                iced_x86::Mnemonic::Int3 => Ok((DecodeContinue::Break, None)),
+                _ => match instr.op0_kind() {
+                    iced_x86::OpKind::Immediate8 => Ok((DecodeContinue::Continue, None)),
+                    _ => Err(format!(
+                        "Interrupt with op kind {:?} not supported (IP {:#x})",
+                        instr.op0_kind(),
+                        instr.ip()
+                    )),
+                },
+            },
+            FlowControl::XbeginXabortXend => {
+                panic!("XbeginXabortXend not supported (ID {:#x})", instr.ip());
+            }
+            FlowControl::Exception => panic!("Exception! (ID {:#x})", instr.ip()),
+        }
+    }
+}
+
+impl<'a> TextDecoder<'_> {
+    pub fn new(
+        bitness: u32,
+        base_address: u64,
+        data: &'a [u8],
+    ) -> Result<TextDecoder<'a>, Box<dyn Error>> {
+        Ok(TextDecoder {
+            base_address: base_address,
+            bitness: bitness,
+            data: data,
+        })
+    }
+}
+impl Decoder for TextDecoder<'_> {
+    fn decode_at(&self, block_type: BlockType, addr: u64) -> Result<DecodedBlock, Box<dyn Error>> {
+        let position: usize = (addr - self.base_address).try_into().unwrap();
+
+        let decoder = iced_x86::Decoder::with_ip(
+            self.bitness,
+            &self.data[position..],
+            addr,
+            iced_x86::DecoderOptions::NONE,
+        );
+
+        let mut instructions = Vec::new();
+
+        let mut branches: Vec<Branch> = Vec::new();
+
+        for instr in decoder {
+            instructions.push(instr);
+
+            let (cont, br) = Self::process_branch_instr(instr)?;
+            if let Some(mut br) = br {
+                branches.append(&mut br);
+            }
+
+            if cont == DecodeContinue::Break {
+                break;
+            }
+        }
+
+        Ok(DecodedBlock::new(
+            block_type,
+            instructions,
+            Vec::new(),
+            branches,
+        ))
+    }
+}
+
+fn merge_blocks(blocks: HashMap<u64, DecodedBlock>) -> IntervalTree<u64, DecodedBlock> {
+    let blocks_iter = blocks.values();
+
+    let tree = IntervalTree::from_iter(blocks_iter);
+
+    // Find intersections for blocks
+    let mut block_entry_points_to_process: BTreeSet<u64> =
+        BTreeSet::from_iter(blocks.keys().map(|k| *k).sorted());
+
+    // let mut block_entry_points_processed: HashSet<u64> = HashSet::new();
+
+    // let merged_blocks: Vec<DecodedBlock> = blocks.values().cloned().collect();
+
+    let mut merged_blocks = Vec::new();
+
+    while let Some(ip) = block_entry_points_to_process.first().cloned() {
+        let blocks_containing_ip: Vec<_> = tree.query_point(ip).collect();
+
+        block_entry_points_to_process.remove(&ip);
+
+        let mut merged_block = MergeOrRebalanceResult::None;
+
+        for Element { range: _, value: b } in blocks_containing_ip {
+            match merged_block {
+                MergeOrRebalanceResult::None => {
+                    block_entry_points_to_process.remove(&b.range.start);
+                    merged_block = MergeOrRebalanceResult::Single((*b).clone());
+                }
+                MergeOrRebalanceResult::Single(a) => {
+                    block_entry_points_to_process.remove(&a.range.start);
+                    block_entry_points_to_process.remove(&b.range.start);
+                    merged_block = a.merge(b);
+                }
+                MergeOrRebalanceResult::Two(a1, a2) => {
+                    block_entry_points_to_process.remove(&a1.range.start);
+                    block_entry_points_to_process.remove(&a2.range.start);
+                    block_entry_points_to_process.remove(&b.range.start);
+                    merged_blocks.push(a1);
+                    merged_block = a2.merge(b);
                 }
             }
         }
 
-        let blocks_with_backrefs = merged_blocks.into_iter().map(|block| {
-            // Find backrefs by going over the range in the map
-
-            let backrefs_for_block = block_backrefs.range(block.range);
-            let backrefs = backrefs_for_block
-                .flat_map(|b| b.1.into_iter())
-                .map(|b| *b)
-                .collect();
-
-            DecodedBlock::new(
-                block.block_type,
-                block.instructions,
-                backrefs,
-                block.branch_targets,
-            )
-        });
-
-        IntervalTree::from_iter(blocks_with_backrefs)
+        match merged_block {
+            MergeOrRebalanceResult::None => {}
+            MergeOrRebalanceResult::Single(b) => merged_blocks.push(b),
+            MergeOrRebalanceResult::Two(a, b) => {
+                merged_blocks.push(a);
+                merged_blocks.push(b);
+            }
+        }
     }
+
+    merged_blocks.sort_by_key(|b| b.range.start);
+    // Second pass: merge adjacent blocks if possible
+
+    let merged_blocks = if merged_blocks.len() > 1 {
+        merged_blocks
+            .iter()
+            .fold(im::Vector::new(), |acc: im::Vector<DecodedBlock>, b| {
+                if let Some(a) = acc.last() {
+                    let mut acc_clone = acc.clone();
+
+                    match a.merge(b) {
+                        MergeOrRebalanceResult::None => {
+                            acc_clone.push_back((*b).clone());
+                        }
+                        MergeOrRebalanceResult::Single(m) => {
+                            acc_clone.pop_back();
+                            acc_clone.push_back(m);
+                        }
+                        MergeOrRebalanceResult::Two(m1, m2) => {
+                            acc_clone.pop_back();
+                            acc_clone.push_back(m1);
+                            acc_clone.push_back(m2);
+                        }
+                    }
+
+                    acc_clone
+                } else {
+                    let mut acc_clone = acc.clone();
+                    acc_clone.push_back((*b).clone());
+                    acc_clone
+                }
+            })
+            .into_iter()
+            .collect()
+    } else {
+        merged_blocks
+    };
+
+    // Construct backreferences
+    let mut block_backrefs: BTreeMap<u64, HashSet<Branch>> = BTreeMap::new();
+    for block in &merged_blocks {
+        for branch in &block.branch_targets {
+            if let Some(backrefs) = block_backrefs.get_mut(&branch.to) {
+                backrefs.insert(*branch);
+            } else {
+                block_backrefs.insert(branch.to, HashSet::from_iter(vec![*branch]));
+            }
+        }
+    }
+
+    let blocks_with_backrefs = merged_blocks.into_iter().map(|block| {
+        // Find backrefs by going over the range in the map
+
+        let backrefs_for_block = block_backrefs.range(block.range);
+        let backrefs = backrefs_for_block
+            .flat_map(|b| b.1.into_iter())
+            .map(|b| *b)
+            .collect();
+
+        DecodedBlock::new(
+            block.block_type,
+            block.instructions,
+            backrefs,
+            block.branch_targets,
+        )
+    });
+
+    IntervalTree::from_iter(blocks_with_backrefs)
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]

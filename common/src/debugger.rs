@@ -1,4 +1,4 @@
-use std::{collections::HashSet, mem::MaybeUninit, ptr::addr_of_mut};
+use std::{collections::HashSet, ffi::c_void, mem::MaybeUninit, ptr::addr_of_mut};
 
 use windows::{
     core::*,
@@ -12,14 +12,25 @@ use windows::{
     },
 };
 
+pub struct ProcessCreatedData {
+    pub base_address: u64,
+    pub entry_point: u64,
+    pub read_memory: Box<dyn Fn(u64, usize) -> Result<Vec<u8>>>,
+    pub write_memory: Box<dyn Fn(u64, &[u8]) -> Result<()>>,
+}
+
 pub struct DebuggerCore {
     active_pids: HashSet<u32>,
+    process_created_handler: Box<dyn Fn(ProcessCreatedData) -> core::result::Result<(), Box<dyn std::error::Error>>>,
 }
 
 impl DebuggerCore {
-    pub fn new() -> DebuggerCore {
+    pub fn new(
+        process_created_handler: Box<dyn Fn(ProcessCreatedData) -> core::result::Result<(), Box<dyn std::error::Error>>>,
+    ) -> DebuggerCore {
         DebuggerCore {
             active_pids: HashSet::new(),
+            process_created_handler,
         }
     }
 
@@ -46,7 +57,36 @@ impl DebuggerCore {
         println!("Load DLL {}", image_name);
     }
 
-    fn handle_create_process(&mut self, create_process_info: CREATE_PROCESS_DEBUG_INFO) {
+    fn read_memory(hprocess: HANDLE, address: u64, size: usize) -> Result<Vec<u8>> {
+        let mut memory: Vec<u8> = Vec::with_capacity(size);
+        unsafe {
+            let mut bytes_read = 0;
+            ReadProcessMemory(
+                hprocess,
+                address as *const c_void,
+                memory.as_mut_ptr().cast(),
+                size,
+                Some(addr_of_mut!(bytes_read)),
+            )?;
+            memory.set_len(bytes_read);
+        }
+        Ok(memory)
+    }
+
+    fn write_memory(hproccess: HANDLE, address: u64, data: &[u8]) -> Result<()> {
+        unsafe {
+            WriteProcessMemory(
+                hproccess,
+                address as *const c_void,
+                data.as_ptr().cast(),
+                data.len(),
+                None,
+            )?;
+        }
+        Ok(())
+    }
+
+    fn handle_create_process(&mut self, create_process_info: CREATE_PROCESS_DEBUG_INFO) -> bool {
         let image_name = if create_process_info.hFile.is_invalid() {
             String::from("(unknown)")
         } else {
@@ -81,10 +121,40 @@ impl DebuggerCore {
             self.active_pids.insert(pid);
         }
 
-        println!("Create process {} {}", pid, image_name);
+        println!("Created process {} {}", pid, image_name);
+        if let Some(start_address) = create_process_info.lpStartAddress {
+            let start_address = start_address as usize;
+            let base_address = create_process_info.lpBaseOfImage as usize;
+            let hprocess = create_process_info.hProcess;
+
+            let data = ProcessCreatedData {
+                base_address: base_address
+                    .try_into()
+                    .expect("Cannot cast start_address into u64"),
+                entry_point: start_address
+                    .try_into()
+                    .expect("Cannot cast start_address into u64"),
+                read_memory: Box::new(move |address, size| {
+                    DebuggerCore::read_memory(hprocess, address, size)
+                }),
+                write_memory: Box::new(move |address, data| {
+                    DebuggerCore::write_memory(hprocess, address, data)
+                }),
+            };
+
+            (self.process_created_handler)(data).expect("Failed to execute callback");
+        } else {
+            println!("No start address for process, can't proceed");
+            return true;
+        }
+        false
     }
 
-    fn handle_exception(&self, debug_ev: DEBUG_EVENT, exception_info: EXCEPTION_DEBUG_INFO) -> NTSTATUS {
+    fn handle_exception(
+        &self,
+        debug_ev: DEBUG_EVENT,
+        exception_info: EXCEPTION_DEBUG_INFO,
+    ) -> NTSTATUS {
         let exception_record = exception_info.ExceptionRecord;
         let exception_code = exception_record.ExceptionCode;
 
@@ -193,7 +263,9 @@ impl DebuggerCore {
                     dw_continue_status = self.handle_exception(debug_ev, exception_info);
                 }
                 CREATE_PROCESS_DEBUG_EVENT => unsafe {
-                    self.handle_create_process(debug_ev.u.CreateProcessInfo);
+                    if self.handle_create_process(debug_ev.u.CreateProcessInfo) {
+                        break;
+                    }
                 },
                 // CREATE_THREAD_DEBUG_EVENT => {
                 //     println!("Thread created");
