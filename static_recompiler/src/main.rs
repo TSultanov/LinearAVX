@@ -1,5 +1,5 @@
 use object::{Object, ObjectSection};
-use static_recompiler::{Config, TextDecoder};
+use static_recompiler::{create_decoder, Config};
 use std::{env, error::Error, fs};
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("{} at {:#x}", s.name()?, s.address());
     }
 
-    let text_decoder = TextDecoder::new(&file)?;
+    let text_decoder = create_decoder(&file)?;
 
     let blocks = text_decoder.decode_all_from(entry)?;
     for block in blocks {

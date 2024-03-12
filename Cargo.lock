@@ -33,6 +33,10 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 name = "common"
 version = "0.1.0"
 dependencies = [
+ "iced-x86",
+ "im",
+ "intervaltree",
+ "itertools",
  "windows",
 ]
 
@@ -223,10 +227,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 name = "static_recompiler"
 version = "0.1.0"
 dependencies = [
- "iced-x86",
- "im",
- "intervaltree",
- "itertools",
+ "common",
  "object",
 ]
 
