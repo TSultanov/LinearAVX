@@ -1,4 +1,4 @@
-use common::decoder::Decoder;
+use common::decoder::base::Decoder;
 use object::{Object, ObjectSection};
 use static_recompiler::{create_decoder, Config};
 use std::{env, error::Error, fs};

@@ -1,7 +1,7 @@
 use std::error::Error;
 
+use common::decoder::memory::TextDecoder;
 use object::{Object, ObjectSection};
-use common::decoder::TextDecoder;
 
 pub struct Config {
     pub input_file_path: String,
@@ -35,5 +35,5 @@ pub fn create_decoder<'a>(file: &'a object::File) -> Result<TextDecoder<'a>, Box
 
     let base_address = text_section.address();
 
-    TextDecoder::<'a>::new(bitness, base_address, text_section.data()?)
+    Ok(TextDecoder::<'a>::new(bitness, base_address, text_section.data()?))
 }

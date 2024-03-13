@@ -1,10 +1,19 @@
+use common::{
+    debugger::{DebuggerCore, ProcessMemoryInterface},
+    decoder::{
+        base::{BlockType, Decoder},
+        process::ProcessDecoder,
+    },
+};
 use std::{env, error::Error, mem::MaybeUninit};
-use common::debugger::{DebuggerCore, ProcessCreatedData};
 use windows::{
     core::{HSTRING, PWSTR},
     Win32::{
         Foundation::CloseHandle,
-        System::{Diagnostics::Debug::CREATE_PROCESS_DEBUG_INFO, Threading::{CreateProcessW, DEBUG_PROCESS, STARTUPINFOW}},
+        System::{
+            Diagnostics::Debug::CREATE_PROCESS_DEBUG_INFO,
+            Threading::{CreateProcessW, DEBUG_PROCESS, STARTUPINFOW},
+        },
     },
 };
 
@@ -54,11 +63,19 @@ fn main() {
     }
 }
 
-fn proc_created_handler(data: ProcessCreatedData) -> Result<(), Box<dyn Error>> {
+fn proc_created_handler(data: ProcessMemoryInterface) -> Result<(), Box<dyn Error>> {
     println!("Base address {:#x}", data.base_address);
     println!("Entry point {:#x}", data.entry_point);
 
-    let entry = data.read_memory.as_ref()(data.entry_point, 1024)?;
+    let decoder = ProcessDecoder::new(&data);
 
-    Ok(())
+    let blocks = decoder.decode_all_from(data.entry_point)?;
+
+    for block in blocks {
+        block.value.pretty_print();
+    }
+
+    Err("Terminate".into())
+
+    // Ok(())
 }

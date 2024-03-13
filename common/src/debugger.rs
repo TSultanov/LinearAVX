@@ -12,21 +12,31 @@ use windows::{
     },
 };
 
-pub struct ProcessCreatedData {
+pub struct ProcessMemoryInterface {
     pub base_address: u64,
     pub entry_point: u64,
-    pub read_memory: Box<dyn Fn(u64, usize) -> Result<Vec<u8>>>,
-    pub write_memory: Box<dyn Fn(u64, &[u8]) -> Result<()>>,
+    read_memory: Box<dyn Fn(u64, usize) -> Result<Vec<u8>>>,
+    write_memory: Box<dyn Fn(u64, &[u8]) -> Result<()>>,
+}
+
+impl ProcessMemoryInterface {
+    pub fn read_memory(&self, addr: u64, size: usize) -> Result<Vec<u8>> {
+        (self.read_memory)(addr, size)
+    }
+
+    pub fn write_memory(&self, addr: u64, data: &[u8]) -> Result<()> {
+        (self.write_memory)(addr, data)
+    }
 }
 
 pub struct DebuggerCore {
     active_pids: HashSet<u32>,
-    process_created_handler: Box<dyn Fn(ProcessCreatedData) -> core::result::Result<(), Box<dyn std::error::Error>>>,
+    process_created_handler: Box<dyn Fn(ProcessMemoryInterface) -> core::result::Result<(), Box<dyn std::error::Error>>>,
 }
 
 impl DebuggerCore {
     pub fn new(
-        process_created_handler: Box<dyn Fn(ProcessCreatedData) -> core::result::Result<(), Box<dyn std::error::Error>>>,
+        process_created_handler: Box<dyn Fn(ProcessMemoryInterface) -> core::result::Result<(), Box<dyn std::error::Error>>>,
     ) -> DebuggerCore {
         DebuggerCore {
             active_pids: HashSet::new(),
@@ -127,7 +137,7 @@ impl DebuggerCore {
             let base_address = create_process_info.lpBaseOfImage as usize;
             let hprocess = create_process_info.hProcess;
 
-            let data = ProcessCreatedData {
+            let data = ProcessMemoryInterface {
                 base_address: base_address
                     .try_into()
                     .expect("Cannot cast start_address into u64"),
