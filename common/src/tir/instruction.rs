@@ -40,13 +40,7 @@ pub enum Register {
 
 impl From<iced_x86::Register> for Register {
     fn from(reg: iced_x86::Register) -> Self {
-        if reg.is_ymm() {
-            let reg_num = reg as usize - iced_x86::Register::YMM0 as usize;
-            let virtual_reg = VirtualRegister::from_usize(reg_num).unwrap();
-            Register::Virtual(virtual_reg)
-        } else {
-            Register::Native(reg)
-        }
+        Register::Native(reg)
     }
 }
 
