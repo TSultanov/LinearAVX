@@ -1,4 +1,4 @@
-use common::decoder::base::Decoder;
+use common::{compiler::analyze_block, decoder::base::Decoder};
 use object::{Object, ObjectSection};
 use static_recompiler::{create_decoder, Config};
 use std::{env, error::Error, fs};
@@ -29,7 +29,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let blocks = text_decoder.decode_all_from(entry)?;
     for block in blocks {
-        block.value.pretty_print();
+        if block.value.needs_recompiling() && block.value.range.start == 0x1401cd710 {
+            // block.value.pretty_print();
+            analyze_block(&block.value);
+            break;
+        }
     }
 
     Ok(())

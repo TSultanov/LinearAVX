@@ -4,7 +4,7 @@ use std::{
     ops::Range,
 };
 
-use iced_x86::{FlowControl, Formatter, Instruction};
+use iced_x86::{CpuidFeature, FlowControl, Formatter, Instruction};
 use intervaltree::{Element, IntervalTree};
 use itertools::Itertools;
 
@@ -299,7 +299,7 @@ impl From<BranchType> for BlockType {
 
 #[derive(Clone)]
 pub struct DecodedBlock {
-    instructions: Vec<iced_x86::Instruction>,
+    pub instructions: Vec<iced_x86::Instruction>,
     pub block_type: BlockType,
     pub branch_targets: Vec<Branch>,
     pub references: Vec<Branch>,
@@ -514,5 +514,19 @@ impl DecodedBlock {
             }
         }
         println!("*****");
+    }
+
+    pub fn needs_recompiling(&self) -> bool {
+        self.instructions.iter().any(|i| {
+            i.cpuid_features().iter().any(|f| {
+                match f {
+                    CpuidFeature::AVX => true,
+                    CpuidFeature::AVX2 => true,
+                    CpuidFeature::BMI1 => true,
+                    CpuidFeature::BMI2 => true,
+                    _ => false,
+                }
+            })
+        })
     }
 }
