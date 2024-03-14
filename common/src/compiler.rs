@@ -4,7 +4,8 @@ pub fn analyze_block(block: &DecodedBlock) {
     let ir: Vec<_> = block
         .instructions
         .iter()
-        .flat_map(|i| Instruction::translate_native(*i))
+        .map(|i| Instruction::wrap_native(*i))
+        .flat_map(|i| i.map())
         .collect();
 
     for i in ir {
