@@ -1,17 +1,18 @@
-use std::iter;
+use std::{collections::HashMap, iter};
+use super::{Instruction, Mnemonic, Operand, Register, VirtualRegister};
 
-use super::{Instruction, Operand, Register, VirtualRegister};
-use iced_x86::Mnemonic;
-
-fn add_zeroupper(vec: Vec<Instruction>) -> Vec<Instruction> {
+fn add_zeroupper(vec: Vec<Instruction>, op: Operand) -> Vec<Instruction> {
     let mut result = Vec::new();
     for i in vec {
         result.push(i)
     }
     result.push(Instruction {
+        original_instr: result.last().unwrap().original_instr,
         original_ip: result.last().unwrap().original_ip,
-        operands: vec![],
-        target_mnemonic: Mnemonic::Vzeroupper,
+        original_next_ip: result.last().unwrap().original_next_ip,
+        operands: vec![op],
+        flow_control: iced_x86::FlowControl::Next,
+        target_mnemonic: Mnemonic::Regzero,
     });
     result
 }
@@ -19,23 +20,52 @@ fn add_zeroupper(vec: Vec<Instruction>) -> Vec<Instruction> {
 impl Instruction {
     pub fn map(self) -> Vec<Instruction> {
         match self.target_mnemonic {
-            Mnemonic::INVALID => panic!("Invalid instruction"),
-            Mnemonic::Vmovups => {
-                let new_opcode = Self {
-                    target_mnemonic: Mnemonic::Movups,
-                    ..self
-                };
-                let no_ymm = new_opcode.eliminate_ymm_by_splitting(true);
-                no_ymm
-            }
-            _ => iter::once(self).collect(),
+            super::Mnemonic::Real(mnemonic) => match mnemonic {
+                iced_x86::Mnemonic::INVALID => panic!("Invalid instruction"),
+                iced_x86::Mnemonic::Vmovups => {
+                    let new_op = Self {
+                        target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Movups),
+                        ..self
+                    };
+                    let no_ymm = new_op.eliminate_ymm_by_splitting(true);
+                    no_ymm
+                }
+                iced_x86::Mnemonic::Vmovsd => {
+                    let new_op = Self {
+                        target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Movsd),
+                        ..self
+                    };
+                    let no_ymm = new_op.eliminate_ymm_by_splitting(true);
+                    no_ymm
+                }
+                _ => vec![self],
+            },
+            super::Mnemonic::Regzero => todo!(),
         }
     }
 
     pub fn eliminate_ymm_by_splitting(self, zeroupper: bool) -> Vec<Self> {
         if !self.has_ymm() {
-            return if zeroupper {
-                add_zeroupper(vec![self])
+            // This is cursed
+            return if let Some(first_op) = self.operands.first() {
+                if zeroupper {
+                    match first_op {
+                        Operand::Register(reg) => match reg {
+                            Register::Native(reg) => {
+                                if reg.is_xmm() {
+                                    let reg = Register::Virtual(VirtualRegister::high_for_xmm(reg));
+                                    add_zeroupper(vec![self], Operand::Register(reg))
+                                } else {
+                                    vec![self]
+                                }
+                            }
+                            Register::Virtual(_) => vec![self],
+                        },
+                        _ => vec![self],
+                    }
+                } else {
+                    vec![self]
+                }
             } else {
                 vec![self]
             };
@@ -49,7 +79,7 @@ impl Instruction {
                 Operand::Register(reg) => match reg {
                     Register::Native(reg) => {
                         if reg.is_ymm() {
-                            Operand::Register(Register::Virtual(VirtualRegister::pair_for_ymm(reg).0))
+                            Operand::Register(VirtualRegister::pair_for_ymm(reg).0)
                         } else {
                             *o
                         }
@@ -61,8 +91,11 @@ impl Instruction {
             .collect();
 
         let first_instr = Instruction {
+            original_instr: self.original_instr,
             original_ip: self.original_ip,
-            target_mnemonic: self.target_mnemonic,
+            original_next_ip: self.original_next_ip,
+            target_mnemonic: self.target_mnemonic.clone(),
+            flow_control: iced_x86::FlowControl::Next,
             operands: operands,
         };
 
@@ -74,7 +107,7 @@ impl Instruction {
                 Operand::Register(reg) => match reg {
                     Register::Native(reg) => {
                         if reg.is_ymm() {
-                            Operand::Register(Register::Virtual(VirtualRegister::pair_for_ymm(reg).1))
+                            Operand::Register(VirtualRegister::pair_for_ymm(reg).1)
                         } else {
                             *o
                         }
@@ -96,11 +129,63 @@ impl Instruction {
             })
             .collect();
         let second_instr = Instruction {
+            original_instr: self.original_instr,
             original_ip: self.original_ip,
+            original_next_ip: self.original_next_ip,
             target_mnemonic: self.target_mnemonic,
+            flow_control: iced_x86::FlowControl::Next,
             operands: operands,
         };
 
         vec![first_instr, second_instr]
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum RegProdCons {
+    AllRead,
+    FirstWriteOtherRead,
+    None
+}
+
+pub fn get_prod_cons(m: &Mnemonic) -> RegProdCons {
+    match m {
+        Mnemonic::Real(m) => {
+            match m {
+                iced_x86::Mnemonic::INVALID => todo!(),
+                iced_x86::Mnemonic::Push
+                | iced_x86::Mnemonic::Pop
+                | iced_x86::Mnemonic::Jne
+                | iced_x86::Mnemonic::Js
+                | iced_x86::Mnemonic::Call
+                | iced_x86::Mnemonic::Test
+                | iced_x86::Mnemonic::Jmp
+                | iced_x86::Mnemonic::Jb
+                | iced_x86::Mnemonic::Jae
+                | iced_x86::Mnemonic::Vcomiss
+                | iced_x86::Mnemonic::Cmp => RegProdCons::AllRead,
+                iced_x86::Mnemonic::Sub => RegProdCons::FirstWriteOtherRead,
+                iced_x86::Mnemonic::Xor
+                | iced_x86::Mnemonic::Mov
+                | iced_x86::Mnemonic::Shr
+                | iced_x86::Mnemonic::And
+                | iced_x86::Mnemonic::Or
+                | iced_x86::Mnemonic::Add
+                | iced_x86::Mnemonic::Vmovss
+                | iced_x86::Mnemonic::Vmovsd
+                | iced_x86::Mnemonic::Vxorps
+                | iced_x86::Mnemonic::Vcvtsi2ss
+                | iced_x86::Mnemonic::Vcvttss2si
+                | iced_x86::Mnemonic::Vaddss
+                | iced_x86::Mnemonic::Vmulss
+                | iced_x86::Mnemonic::Vsubss
+                | iced_x86::Mnemonic::Vmovups => RegProdCons::FirstWriteOtherRead,
+                iced_x86::Mnemonic::Vzeroupper
+                | iced_x86::Mnemonic::Ret  => RegProdCons::None,
+
+                _ => panic!("{:?} not implemented", m),
+            }
+        },
+        Mnemonic::Regzero => RegProdCons::FirstWriteOtherRead,
     }
 }

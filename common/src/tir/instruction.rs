@@ -1,11 +1,4 @@
-mod mapping;
-
-#[derive(Debug)]
-pub struct Instruction {
-    pub original_ip: u64,
-    pub target_mnemonic: iced_x86::Mnemonic,
-    pub operands: Vec<Operand>,
-}
+pub mod mapping;
 
 #[derive(Debug, Copy, Clone)]
 pub enum VirtualRegister {
@@ -44,28 +37,54 @@ pub enum VirtualRegister {
 }
 
 impl VirtualRegister {
-    pub fn pair_for_ymm(reg: &iced_x86::Register) -> (Self, Self) {
+    pub fn high_for_xmm(reg: &iced_x86::Register) -> Self {
         match reg {
-            iced_x86::Register::YMM0 => (Self::XMM0L, Self::XMM0H),
-            iced_x86::Register::YMM1 => (Self::XMM1L, Self::XMM1H),
-            iced_x86::Register::YMM2 => (Self::XMM2L, Self::XMM2H),
-            iced_x86::Register::YMM3 => (Self::XMM3L, Self::XMM3H),
-            iced_x86::Register::YMM4 => (Self::XMM4L, Self::XMM4H),
-            iced_x86::Register::YMM5 => (Self::XMM5L, Self::XMM5H),
-            iced_x86::Register::YMM6 => (Self::XMM6L, Self::XMM6H),
-            iced_x86::Register::YMM7 => (Self::XMM7L, Self::XMM7H),
-            iced_x86::Register::YMM8 => (Self::XMM8L, Self::XMM8H),
-            iced_x86::Register::YMM9 => (Self::XMM9L, Self::XMM9H),
-            iced_x86::Register::YMM10 => (Self::XMM10L, Self::XMM10H),
-            iced_x86::Register::YMM11 => (Self::XMM11L, Self::XMM11H),
-            iced_x86::Register::YMM12 => (Self::XMM12L, Self::XMM12H),
-            iced_x86::Register::YMM13 => (Self::XMM13L, Self::XMM13H),
-            iced_x86::Register::YMM14 => (Self::XMM14L, Self::XMM14H),
-            iced_x86::Register::YMM15 => (Self::XMM15L, Self::XMM15H),
+            iced_x86::Register::XMM0 => Self::XMM0H,
+            iced_x86::Register::XMM1 => Self::XMM1H,
+            iced_x86::Register::XMM2 => Self::XMM2H,
+            iced_x86::Register::XMM3 => Self::XMM3H,
+            iced_x86::Register::XMM4 => Self::XMM4H,
+            iced_x86::Register::XMM5 => Self::XMM5H,
+            iced_x86::Register::XMM6 => Self::XMM6H,
+            iced_x86::Register::XMM7 => Self::XMM7H,
+            iced_x86::Register::XMM8 => Self::XMM8H,
+            iced_x86::Register::XMM9 => Self::XMM9H,
+            iced_x86::Register::XMM10 => Self::XMM10H,
+            iced_x86::Register::XMM11 => Self::XMM11H,
+            iced_x86::Register::XMM12 => Self::XMM12H,
+            iced_x86::Register::XMM13 => Self::XMM13H,
+            iced_x86::Register::XMM14 => Self::XMM14H,
+            iced_x86::Register::XMM15 => Self::XMM15H,
             _ => {
                 panic!("Unsupported register {:?}!", reg);
             }
         }
+    }
+
+    pub fn pair_for_ymm(reg: &iced_x86::Register) -> (Register, Register) {
+        let p = match reg {
+            iced_x86::Register::YMM0 => (iced_x86::Register::XMM0, Self::XMM0H),
+            iced_x86::Register::YMM1 => (iced_x86::Register::XMM1, Self::XMM1H),
+            iced_x86::Register::YMM2 => (iced_x86::Register::XMM2, Self::XMM2H),
+            iced_x86::Register::YMM3 => (iced_x86::Register::XMM3, Self::XMM3H),
+            iced_x86::Register::YMM4 => (iced_x86::Register::XMM4, Self::XMM4H),
+            iced_x86::Register::YMM5 => (iced_x86::Register::XMM5, Self::XMM5H),
+            iced_x86::Register::YMM6 => (iced_x86::Register::XMM6, Self::XMM6H),
+            iced_x86::Register::YMM7 => (iced_x86::Register::XMM7, Self::XMM7H),
+            iced_x86::Register::YMM8 => (iced_x86::Register::XMM8, Self::XMM8H),
+            iced_x86::Register::YMM9 => (iced_x86::Register::XMM9, Self::XMM9H),
+            iced_x86::Register::YMM10 => (iced_x86::Register::XMM10, Self::XMM10H),
+            iced_x86::Register::YMM11 => (iced_x86::Register::XMM11, Self::XMM11H),
+            iced_x86::Register::YMM12 => (iced_x86::Register::XMM12, Self::XMM12H),
+            iced_x86::Register::YMM13 => (iced_x86::Register::XMM13, Self::XMM13H),
+            iced_x86::Register::YMM14 => (iced_x86::Register::XMM14, Self::XMM14H),
+            iced_x86::Register::YMM15 => (iced_x86::Register::XMM15, Self::XMM15H),
+            _ => {
+                panic!("Unsupported register {:?}!", reg);
+            }
+        };
+
+        (Register::Native(p.0), Register::Virtual(p.1))
     }
 }
 
@@ -78,6 +97,12 @@ pub enum Register {
 impl From<iced_x86::Register> for Register {
     fn from(reg: iced_x86::Register) -> Self {
         Register::Native(reg)
+    }
+}
+
+impl From<VirtualRegister> for Register {
+    fn from(reg: VirtualRegister) -> Self {
+        Register::Virtual(reg)
     }
 }
 
@@ -141,6 +166,22 @@ impl Operand {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum Mnemonic {
+    Real(iced_x86::Mnemonic),
+    Regzero
+}
+
+#[derive(Debug, Clone)]
+pub struct Instruction {
+    pub original_instr: iced_x86::Instruction,
+    pub original_ip: u64,
+    pub original_next_ip: u64,
+    pub target_mnemonic: Mnemonic,
+    pub flow_control: iced_x86::FlowControl,
+    pub operands: Vec<Operand>,
+}
+
 impl Instruction {
     pub fn wrap_native(instr: iced_x86::Instruction) -> Self {
         let operands = (0..instr.op_count())
@@ -148,8 +189,11 @@ impl Instruction {
             .collect();
 
         Self {
+            original_instr: instr,
             original_ip: instr.ip(),
-            target_mnemonic: instr.mnemonic(),
+            original_next_ip: instr.next_ip(),
+            target_mnemonic: Mnemonic::Real(instr.mnemonic()),
+            flow_control: instr.flow_control(),
             operands: operands,
         }
     }
