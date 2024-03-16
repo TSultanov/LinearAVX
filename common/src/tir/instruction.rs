@@ -1,23 +1,9 @@
+use self::mapping::{get_prod_cons, RegProdCons};
+use enum_iterator::{all, Sequence};
 pub mod mapping;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Sequence)]
 pub enum VirtualRegister {
-    XMM0L,
-    XMM1L,
-    XMM2L,
-    XMM3L,
-    XMM4L,
-    XMM5L,
-    XMM6L,
-    XMM7L,
-    XMM8L,
-    XMM9L,
-    XMM10L,
-    XMM11L,
-    XMM12L,
-    XMM13L,
-    XMM14L,
-    XMM15L,
     XMM0H,
     XMM1H,
     XMM2H,
@@ -88,10 +74,42 @@ impl VirtualRegister {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum RegisterValue {
+    Unknown,
+    Zero,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Register {
     Native(iced_x86::Register),
     Virtual(VirtualRegister),
+}
+
+impl Register {
+    pub fn is_xmm_hi(&self) -> bool {
+        match self {
+            Register::Native(reg) => false,
+            Register::Virtual(reg) => match reg {
+                VirtualRegister::XMM0H
+                | VirtualRegister::XMM1H
+                | VirtualRegister::XMM2H
+                | VirtualRegister::XMM3H
+                | VirtualRegister::XMM4H
+                | VirtualRegister::XMM5H
+                | VirtualRegister::XMM6H
+                | VirtualRegister::XMM7H
+                | VirtualRegister::XMM8H
+                | VirtualRegister::XMM9H
+                | VirtualRegister::XMM10H
+                | VirtualRegister::XMM11H
+                | VirtualRegister::XMM12H
+                | VirtualRegister::XMM13H
+                | VirtualRegister::XMM14H
+                | VirtualRegister::XMM15H => true,
+            },
+        }
+    }
 }
 
 impl From<iced_x86::Register> for Register {
@@ -169,7 +187,7 @@ impl Operand {
 #[derive(Debug, Clone, Copy)]
 pub enum Mnemonic {
     Real(iced_x86::Mnemonic),
-    Regzero
+    Regzero,
 }
 
 #[derive(Debug, Clone)]
@@ -213,5 +231,72 @@ impl Instruction {
                 displacement: _,
             } => false,
         })
+    }
+
+    fn get_xmm_regs<'a, T: Iterator<Item = &'a Operand>>(operands: T) -> Vec<Register> {
+        let mut ret = Vec::new();
+        for op in operands {
+            match op {
+                Operand::Register(reg) => match reg {
+                    Register::Native(reg) => {
+                        if reg.is_xmm() {
+                            ret.push((*reg).into());
+                        }
+                        if reg.is_ymm() {
+                            let (lo, hi) = VirtualRegister::pair_for_ymm(&reg);
+                            ret.push(lo);
+                            ret.push(hi)
+                        }
+                    }
+                    Register::Virtual(_) => todo!(),
+                },
+                _ => {}
+            }
+        }
+        ret
+    }
+
+    pub fn get_input_xmm_regs(&self) -> Vec<Register> {
+        let pc = get_prod_cons(&self.target_mnemonic);
+        match pc {
+            RegProdCons::AllRead => Self::get_xmm_regs(self.operands.iter()),
+            RegProdCons::FirstModifyOtherRead => Self::get_xmm_regs(self.operands.iter()),
+            RegProdCons::FirstWriteOtherRead => Self::get_xmm_regs(self.operands.iter().skip(1)),
+            RegProdCons::None => vec![],
+        }
+    }
+
+    pub fn get_output_xmm_regs(&self) -> Vec<(Register, RegisterValue)> {
+        match self.target_mnemonic {
+            Mnemonic::Real(m) => match m {
+                iced_x86::Mnemonic::Vzeroupper => all::<VirtualRegister>()
+                    .map(|r| (Register::Virtual(r), RegisterValue::Zero))
+                    .collect(),
+                _ => {
+                    let pc = get_prod_cons(&self.target_mnemonic);
+                    match pc {
+                        RegProdCons::AllRead => {
+                            vec![]
+                        }
+                        RegProdCons::FirstModifyOtherRead => {
+                            Self::get_xmm_regs(self.operands.iter().take(1))
+                                .into_iter()
+                                .map(|r| (r, RegisterValue::Unknown))
+                                .collect()
+                        }
+                        RegProdCons::FirstWriteOtherRead => {
+                            Self::get_xmm_regs(self.operands.iter().take(1))
+                                .into_iter()
+                                .map(|r| (r, RegisterValue::Unknown))
+                                .collect()
+                        }
+                        RegProdCons::None => {
+                            vec![]
+                        }
+                    }
+                }
+            },
+            Mnemonic::Regzero => todo!(),
+        }
     }
 }

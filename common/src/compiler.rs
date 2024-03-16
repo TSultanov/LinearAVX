@@ -1,93 +1,77 @@
 use std::collections::{HashMap, HashSet};
 
-use itertools::Itertools;
+use crate::{
+    decoder::base::DecodedBlock,
+    tir::{Instruction, Register, RegisterValue},
+};
 
-use crate::{decoder::base::DecodedBlock, tir::{mapping::{get_prod_cons, RegProdCons}, Instruction, Operand, Register}};
+#[derive(Debug)]
+pub struct RegisterUse {
+    pub input: Vec<Register>,
+    pub output: Vec<(Register, RegisterValue)>,
+}
 
 #[derive(Debug)]
 pub struct ControlBlock {
-    pub instructions: Vec<Instruction>,
+    pub instructions: Vec<(Instruction, RegisterUse)>,
+    pub input_xmm_registers: Vec<Register>,
+    pub output_xmm_registers: Vec<(Register, RegisterValue)>,
 }
 
 impl ControlBlock {
-    fn get_xmm_regs(operands: Vec<Operand>) -> Vec<iced_x86::Register> {
-        let mut ret = Vec::new();
-        for op in operands {
-            match op {
-                Operand::Register(reg) => {
-                    match reg {
-                        Register::Native(reg) => {
-                            if reg.is_xmm() || reg.is_ymm() {
-                                ret.push(reg);
-                            }
-                        },
-                        Register::Virtual(_) => todo!(),
-                    }
-                },
-                _ => {}    
-            }
+    pub fn new(instructions: Vec<Instruction>) -> Self {
+        let reguse = Self::construct_xmm_register_use(&instructions);
+        let input_xmm_registers = Self::construct_input_xmm_registers(&reguse);
+        let output_xmm_registers = Self::construct_output_xmm_registers(&reguse);
+        Self {
+            instructions: instructions.into_iter().zip(reguse).collect(),
+            input_xmm_registers: input_xmm_registers,
+            output_xmm_registers: output_xmm_registers,
         }
-        ret
     }
 
-    pub fn get_input_xmm_registers(&self) -> Vec<iced_x86::Register> {
-        self.get_input_xmm_registers_until(u64::MAX)
+    fn construct_xmm_register_use(instructions: &Vec<Instruction>) -> Vec<RegisterUse> {
+        instructions
+            .iter()
+            .map(|i| RegisterUse {
+                input: i.get_input_xmm_regs(),
+                output: i.get_output_xmm_regs(),
+            })
+            .collect()
     }
 
-    pub fn get_input_xmm_registers_until(&self, until_ip: u64) -> Vec<iced_x86::Register> {
-        let mut ret = Vec::new();
+    fn construct_input_xmm_registers(register_use: &Vec<RegisterUse>) -> Vec<Register> {
+        let mut seen_outputs = HashSet::new();
+        let mut result = Vec::new();
 
-        for i in &self.instructions {
-            if i.original_ip >= until_ip {
-                break;
+        for ru in register_use {
+            for i in &ru.input {
+                if seen_outputs.contains(i) {
+                    continue;
+                }
+
+                result.push(*i);
             }
-            let pc = get_prod_cons(&i.target_mnemonic);
-            match pc {
-                RegProdCons::AllRead => {
-                    let mut regs = Self::get_xmm_regs(i.operands.clone());
-                    ret.append(&mut regs);
-                },
-                RegProdCons::FirstWriteOtherRead => {
-                    let s = i.operands.iter().skip(1).map(|o| *o).collect();
-                    let mut regs = Self::get_xmm_regs(s);
-                    ret.append(&mut regs);
-                },
-                RegProdCons::None => {},
+            for o in &ru.output {
+                seen_outputs.insert(o.0);
             }
         }
 
-        ret.iter().unique().map(|r| *r).collect()
+        result
     }
 
-    pub fn get_output_xmm_registers(&self) -> Vec<iced_x86::Register> {
-        let mut ret = Vec::new();
+    fn construct_output_xmm_registers(
+        register_use: &Vec<RegisterUse>,
+    ) -> Vec<(Register, RegisterValue)> {
+        let mut seen_outputs = HashMap::new();
 
-        for i in &self.instructions {
-            match i.target_mnemonic {
-                crate::tir::Mnemonic::Real(m) => match m {
-                    iced_x86::Mnemonic::Vzeroupper => {
-                        let input_xmm_regs_until_current = self.get_input_xmm_registers_until(i.original_ip);
-                        let mut ymm_regs = input_xmm_regs_until_current.iter().filter(|r| r.is_ymm()).map(|r| *r).collect();
-                        ret.append(&mut ymm_regs);
-                    },
-                    _ => {
-                        let pc = get_prod_cons(&i.target_mnemonic);
-                        match pc {
-                            RegProdCons::AllRead => {},
-                            RegProdCons::FirstWriteOtherRead => {
-                                let s = i.operands.iter().take(1).map(|o| *o).collect();
-                                let mut regs = Self::get_xmm_regs(s);
-                                ret.append(&mut regs);
-                            },
-                            RegProdCons::None => {},
-                        }
-                    }
-                },
-                crate::tir::Mnemonic::Regzero => todo!(),
+        for ru in register_use {
+            for o in &ru.output {
+                seen_outputs.insert(o.0, o.1);
             }
         }
 
-        ret.iter().unique().map(|r| *r).collect()
+        seen_outputs.into_iter().collect()
     }
 }
 
@@ -121,10 +105,10 @@ fn create_control_blocks(block: &DecodedBlock) -> Vec<ControlBlock> {
                         } else {
                             branch_targets.insert(target);
                         }
-                    },
+                    }
                     iced_x86::OpKind::FarBranch16 => todo!(),
                     iced_x86::OpKind::FarBranch32 => todo!(),
-                    _ => {},
+                    _ => {}
                 }
             }
             iced_x86::FlowControl::XbeginXabortXend => todo!(),
@@ -138,15 +122,11 @@ fn create_control_blocks(block: &DecodedBlock) -> Vec<ControlBlock> {
         let wrapped_instr = Instruction::wrap_native(i.clone());
         if branch_points.contains(&i.ip()) {
             current_block.push(wrapped_instr);
-            result.push(ControlBlock {
-                instructions: current_block,
-            });
+            result.push(ControlBlock::new(current_block));
             current_block = Vec::new();
         } else if branch_targets.contains(&i.ip()) {
             if !current_block.is_empty() {
-                result.push(ControlBlock {
-                    instructions: current_block,
-                });
+                result.push(ControlBlock::new(current_block));
                 current_block = Vec::new();
             }
             current_block.push(wrapped_instr);
@@ -170,11 +150,14 @@ pub fn analyze_block(block: &DecodedBlock) {
 
     for cb in blocks {
         println!("ControlBlock {{");
-        println!("  input = {:?}", cb.get_input_xmm_registers());
+        println!("  input = {:?}", cb.input_xmm_registers);
         for i in &cb.instructions {
-            println!("  {} {:?} {:?}", i.original_ip, i.target_mnemonic, i.operands);
+            println!(
+                "  {} {:?} {:?}",
+                i.0.original_ip, i.0.target_mnemonic, i.0.operands
+            );
         }
-        println!("  changes = {:?}", cb.get_output_xmm_registers());
+        println!("  outputs = {:?}", cb.output_xmm_registers);
         println!("}}");
     }
 }

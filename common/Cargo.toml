@@ -15,6 +15,7 @@ features = [
 ]
 
 [dependencies]
+enum-iterator = "2.0.0"
 iced-x86 = "1.21.0"
 im = "15.1.0"
 intervaltree = "0.2.7"

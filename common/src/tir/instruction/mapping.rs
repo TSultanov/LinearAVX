@@ -1,4 +1,3 @@
-use std::{collections::HashMap, iter};
 use super::{Instruction, Mnemonic, Operand, Register, VirtualRegister};
 
 fn add_zeroupper(vec: Vec<Instruction>, op: Operand) -> Vec<Instruction> {
@@ -145,46 +144,79 @@ impl Instruction {
 pub enum RegProdCons {
     AllRead,
     FirstWriteOtherRead,
-    None
+    FirstModifyOtherRead,
+    None,
 }
 
 pub fn get_prod_cons(m: &Mnemonic) -> RegProdCons {
     match m {
-        Mnemonic::Real(m) => {
-            match m {
-                iced_x86::Mnemonic::INVALID => todo!(),
-                iced_x86::Mnemonic::Push
-                | iced_x86::Mnemonic::Pop
-                | iced_x86::Mnemonic::Jne
-                | iced_x86::Mnemonic::Js
-                | iced_x86::Mnemonic::Call
-                | iced_x86::Mnemonic::Test
-                | iced_x86::Mnemonic::Jmp
-                | iced_x86::Mnemonic::Jb
-                | iced_x86::Mnemonic::Jae
-                | iced_x86::Mnemonic::Vcomiss
-                | iced_x86::Mnemonic::Cmp => RegProdCons::AllRead,
-                iced_x86::Mnemonic::Sub => RegProdCons::FirstWriteOtherRead,
-                iced_x86::Mnemonic::Xor
-                | iced_x86::Mnemonic::Mov
-                | iced_x86::Mnemonic::Shr
-                | iced_x86::Mnemonic::And
-                | iced_x86::Mnemonic::Or
-                | iced_x86::Mnemonic::Add
-                | iced_x86::Mnemonic::Vmovss
-                | iced_x86::Mnemonic::Vmovsd
-                | iced_x86::Mnemonic::Vxorps
-                | iced_x86::Mnemonic::Vcvtsi2ss
-                | iced_x86::Mnemonic::Vcvttss2si
-                | iced_x86::Mnemonic::Vaddss
-                | iced_x86::Mnemonic::Vmulss
-                | iced_x86::Mnemonic::Vsubss
-                | iced_x86::Mnemonic::Vmovups => RegProdCons::FirstWriteOtherRead,
-                iced_x86::Mnemonic::Vzeroupper
-                | iced_x86::Mnemonic::Ret  => RegProdCons::None,
+        Mnemonic::Real(m) => match m {
+            iced_x86::Mnemonic::INVALID => todo!(),
+            iced_x86::Mnemonic::Push
+            | iced_x86::Mnemonic::Pop
+            | iced_x86::Mnemonic::Jne
+            | iced_x86::Mnemonic::Js
+            | iced_x86::Mnemonic::Call
+            | iced_x86::Mnemonic::Test
+            | iced_x86::Mnemonic::Jmp
+            | iced_x86::Mnemonic::Jb
+            | iced_x86::Mnemonic::Jae
+            | iced_x86::Mnemonic::Jbe
+            | iced_x86::Mnemonic::Je
+            | iced_x86::Mnemonic::Vcomiss
+            | iced_x86::Mnemonic::Cmp => RegProdCons::AllRead,
+            iced_x86::Mnemonic::Vmovss
+            | iced_x86::Mnemonic::Vmovsd
+            | iced_x86::Mnemonic::Vxorps
+            | iced_x86::Mnemonic::Vcvtsi2ss
+            | iced_x86::Mnemonic::Vcvttss2si
+            | iced_x86::Mnemonic::Vaddss
+            | iced_x86::Mnemonic::Vmovaps
+            | iced_x86::Mnemonic::Vmulss
+            | iced_x86::Mnemonic::Vmulps
+            | iced_x86::Mnemonic::Vsubps
+            | iced_x86::Mnemonic::Vsubss
+            | iced_x86::Mnemonic::Vinsertps
+            | iced_x86::Mnemonic::Vdpps
+            | iced_x86::Mnemonic::Vcmpss
+            | iced_x86::Mnemonic::Vblendvps
+            | iced_x86::Mnemonic::Vmaxss
+            | iced_x86::Mnemonic::Vmaxps
+            | iced_x86::Mnemonic::Vminps
+            | iced_x86::Mnemonic::Vminss
+            | iced_x86::Mnemonic::Vdivss
+            | iced_x86::Mnemonic::Vextractps
+            | iced_x86::Mnemonic::Vpermilps
+            | iced_x86::Mnemonic::Vblendps
+            | iced_x86::Mnemonic::Vcmpps
+            | iced_x86::Mnemonic::Vshufps
+            | iced_x86::Mnemonic::Vbroadcastss
+            | iced_x86::Mnemonic::Vmovdqu
+            | iced_x86::Mnemonic::Vaddps
+            | iced_x86::Mnemonic::Vrsqrtps
+            | iced_x86::Mnemonic::Vdivps
+            | iced_x86::Mnemonic::Vpand
+            | iced_x86::Mnemonic::Vorps
+            | iced_x86::Mnemonic::Vpsrld
+            | iced_x86::Mnemonic::Vpsubd
+            | iced_x86::Mnemonic::Vcvtdq2ps
+            | iced_x86::Mnemonic::Vmovups => RegProdCons::FirstWriteOtherRead,
+            iced_x86::Mnemonic::Xor
+            | iced_x86::Mnemonic::Sub
+            | iced_x86::Mnemonic::Mov
+            | iced_x86::Mnemonic::Lea
+            | iced_x86::Mnemonic::Shr
+            | iced_x86::Mnemonic::And
+            | iced_x86::Mnemonic::Or
+            | iced_x86::Mnemonic::Add
+            | iced_x86::Mnemonic::Shl
+            | iced_x86::Mnemonic::Vfmadd231ps
+            | iced_x86::Mnemonic::Inc => RegProdCons::FirstModifyOtherRead,
+            iced_x86::Mnemonic::Vzeroupper
+            | iced_x86::Mnemonic::Nop
+            | iced_x86::Mnemonic::Ret => RegProdCons::None,
 
-                _ => panic!("{:?} not implemented", m),
-            }
+            _ => panic!("{:?} not implemented", m),
         },
         Mnemonic::Regzero => RegProdCons::FirstWriteOtherRead,
     }

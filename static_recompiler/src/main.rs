@@ -29,7 +29,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let blocks = text_decoder.decode_all_from(entry)?;
     for block in blocks {
-        if block.value.needs_recompiling() && block.value.range.start == 0x1401cd710 {
+        if block.value.needs_recompiling() && block.value.range.start == 0x1421a8cc0 /*0x1401cd710*/ {
             // block.value.pretty_print();
             analyze_block(&block.value);
             break;
