@@ -211,6 +211,7 @@ pub fn get_prod_cons(m: &Mnemonic) -> RegProdCons {
             | iced_x86::Mnemonic::Add
             | iced_x86::Mnemonic::Shl
             | iced_x86::Mnemonic::Vfmadd231ps
+            | iced_x86::Mnemonic::Vcvtpd2ps
             | iced_x86::Mnemonic::Inc => RegProdCons::FirstModifyOtherRead,
             iced_x86::Mnemonic::Vzeroupper
             | iced_x86::Mnemonic::Nop

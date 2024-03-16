@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use itertools::Itertools;
+
 use crate::{
     decoder::base::DecodedBlock,
     tir::{Instruction, Register, RegisterValue},
@@ -57,7 +59,7 @@ impl ControlBlock {
             }
         }
 
-        result
+        result.into_iter().unique().collect()
     }
 
     fn construct_output_xmm_registers(

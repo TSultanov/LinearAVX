@@ -1,5 +1,9 @@
+use std::collections::HashSet;
+
 use self::mapping::{get_prod_cons, RegProdCons};
 use enum_iterator::{all, Sequence};
+use iced_x86::EncodingKind;
+use itertools::Itertools;
 pub mod mapping;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Sequence)]
@@ -279,16 +283,69 @@ impl Instruction {
                             vec![]
                         }
                         RegProdCons::FirstModifyOtherRead => {
-                            Self::get_xmm_regs(self.operands.iter().take(1))
-                                .into_iter()
-                                .map(|r| (r, RegisterValue::Unknown))
-                                .collect()
+                            let ret: Vec<(Register, RegisterValue)> =
+                                Self::get_xmm_regs(self.operands.iter().take(1))
+                                    .into_iter()
+                                    .map(|r| (r, RegisterValue::Unknown))
+                                    .collect();
+
+                            let mut xmmregs = HashSet::new();
+                            for r in &ret {
+                                xmmregs.insert(r.0);
+                            }
+                            if self.original_instr.encoding() == EncodingKind::VEX {
+                                let high_zero: Vec<(Register, RegisterValue)> = ret
+                                    .iter()
+                                    .filter_map(|r| match r.0 {
+                                        Register::Native(reg) => {
+                                            let high_xmm = Register::Virtual(
+                                                VirtualRegister::high_for_xmm(&reg),
+                                            );
+                                            if xmmregs.contains(&high_xmm) {
+                                                return None;
+                                            }
+
+                                            Some((high_xmm, RegisterValue::Zero))
+                                        }
+                                        Register::Virtual(_) => None,
+                                    })
+                                    .collect();
+                                ret.into_iter().chain(high_zero.into_iter()).collect()
+                            } else {
+                                ret
+                            }
                         }
                         RegProdCons::FirstWriteOtherRead => {
-                            Self::get_xmm_regs(self.operands.iter().take(1))
-                                .into_iter()
-                                .map(|r| (r, RegisterValue::Unknown))
-                                .collect()
+                            let ret: Vec<(Register, RegisterValue)> =
+                                Self::get_xmm_regs(self.operands.iter().take(1))
+                                    .into_iter()
+                                    .map(|r| (r, RegisterValue::Unknown))
+                                    .collect();
+                            let mut xmmregs = HashSet::new();
+                            for r in &ret {
+                                xmmregs.insert(r.0);
+                            }
+                            if self.original_instr.encoding() == EncodingKind::VEX {
+                                let high_zero: Vec<(Register, RegisterValue)> = ret
+                                    .iter()
+                                    .filter_map(|r| match r.0 {
+                                        Register::Native(reg) => {
+                                            let high_xmm = Register::Virtual(
+                                                VirtualRegister::high_for_xmm(&reg),
+                                            );
+                                            if xmmregs.contains(&high_xmm) {
+                                                return None;
+                                            }
+
+                                            Some((high_xmm, RegisterValue::Zero))
+                                        }
+                                        Register::Virtual(_) => None,
+                                    })
+                                    .collect();
+                                ret.into_iter().chain(high_zero.into_iter()).collect()
+                            } else {
+                                ret
+                            }
                         }
                         RegProdCons::None => {
                             vec![]
