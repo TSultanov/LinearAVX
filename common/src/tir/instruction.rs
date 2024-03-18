@@ -128,7 +128,7 @@ impl From<VirtualRegister> for Register {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Operand {
     Register(Register),
     BranchTarget(u64),
@@ -188,7 +188,7 @@ impl Operand {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mnemonic {
     Real(iced_x86::Mnemonic),
     Regzero,
@@ -261,6 +261,45 @@ impl Instruction {
     }
 
     pub fn get_input_xmm_regs(&self) -> Vec<Register> {
+        // Special cases
+        match self.target_mnemonic {
+            Mnemonic::Real(m) => {
+                match m {
+                    // (V)PXOR used to zero out a register - no real dependency on previous state
+                    iced_x86::Mnemonic::Vpxor => {
+                        if self.operands[0] == self.operands[1] && self.operands[1] == self.operands[2] {
+                            return vec![];
+                        }
+                    }
+                    iced_x86::Mnemonic::Pxor => {
+                        if self.operands[0] == self.operands[1] {
+                            return vec![];
+                        }
+                    }
+                    // Assume that all function calls follow Vectorcall convention
+                    // https://learn.microsoft.com/en-us/cpp/cpp/vectorcall?view=msvc-170
+                    iced_x86::Mnemonic::Call => {
+                        return vec![
+                            Register::Native(iced_x86::Register::XMM0),
+                            Register::Virtual(VirtualRegister::XMM0H),
+                            Register::Native(iced_x86::Register::XMM1),
+                            Register::Virtual(VirtualRegister::XMM1H),
+                            Register::Native(iced_x86::Register::XMM2),
+                            Register::Virtual(VirtualRegister::XMM2H),
+                            Register::Native(iced_x86::Register::XMM3),
+                            Register::Virtual(VirtualRegister::XMM3H),
+                            Register::Native(iced_x86::Register::XMM4),
+                            Register::Virtual(VirtualRegister::XMM4H),
+                            Register::Native(iced_x86::Register::XMM5),
+                            Register::Virtual(VirtualRegister::XMM5H),
+                        ];
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+
         let pc = get_prod_cons(&self.target_mnemonic);
         match pc {
             RegProdCons::AllRead => Self::get_xmm_regs(self.operands.iter()),
@@ -271,6 +310,48 @@ impl Instruction {
     }
 
     pub fn get_output_xmm_regs(&self) -> Vec<(Register, RegisterValue)> {
+        // Special cases
+        match self.target_mnemonic {
+            Mnemonic::Real(m) => {
+                match m {
+                    // (V)PXOR used to zero out a register
+                    iced_x86::Mnemonic::Vpxor => {
+                        if self.operands[0] == self.operands[1] && self.operands[1] == self.operands[2] {
+                            let op = self.operands[0];
+                            if let Operand::Register(reg) = op {
+                                return vec![(reg, RegisterValue::Zero)];
+                            }
+                        }
+                    }
+                    iced_x86::Mnemonic::Pxor => {
+                        if self.operands[0] == self.operands[1] {
+                            let op = self.operands[0];
+                            if let Operand::Register(reg) = op {
+                                return vec![(reg, RegisterValue::Zero)];
+                            }
+                        }
+                    }
+                    // Assume that all function calls follow Vectorcall convention
+                    // and potentially return HVA
+                    // https://learn.microsoft.com/en-us/cpp/cpp/vectorcall?view=msvc-170
+                    iced_x86::Mnemonic::Call => {
+                        return vec![
+                            (Register::Native(iced_x86::Register::XMM0), RegisterValue::Unknown),
+                            (Register::Virtual(VirtualRegister::XMM0H), RegisterValue::Unknown),
+                            (Register::Native(iced_x86::Register::XMM1), RegisterValue::Unknown),
+                            (Register::Virtual(VirtualRegister::XMM1H), RegisterValue::Unknown),
+                            (Register::Native(iced_x86::Register::XMM2), RegisterValue::Unknown),
+                            (Register::Virtual(VirtualRegister::XMM2H), RegisterValue::Unknown),
+                            (Register::Native(iced_x86::Register::XMM3), RegisterValue::Unknown),
+                            (Register::Virtual(VirtualRegister::XMM3H), RegisterValue::Unknown),
+                        ];
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+
         match self.target_mnemonic {
             Mnemonic::Real(m) => match m {
                 iced_x86::Mnemonic::Vzeroupper => all::<VirtualRegister>()

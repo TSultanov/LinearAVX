@@ -166,6 +166,10 @@ pub fn get_prod_cons(m: &Mnemonic) -> RegProdCons {
             | iced_x86::Mnemonic::Vcomiss
             | iced_x86::Mnemonic::Cmp => RegProdCons::AllRead,
             iced_x86::Mnemonic::Vmovss
+            | iced_x86::Mnemonic::Sete
+            | iced_x86::Mnemonic::Movzx
+            | iced_x86::Mnemonic::Mov
+            | iced_x86::Mnemonic::Cmova
             | iced_x86::Mnemonic::Vmovsd
             | iced_x86::Mnemonic::Vxorps
             | iced_x86::Mnemonic::Vcvtsi2ss
@@ -200,10 +204,16 @@ pub fn get_prod_cons(m: &Mnemonic) -> RegProdCons {
             | iced_x86::Mnemonic::Vpsrld
             | iced_x86::Mnemonic::Vpsubd
             | iced_x86::Mnemonic::Vcvtdq2ps
+            | iced_x86::Mnemonic::Vmovdqa
+            | iced_x86::Mnemonic::Vpxor
+            | iced_x86::Mnemonic::Vmovd
+            | iced_x86::Mnemonic::Vmovq
+            | iced_x86::Mnemonic::Vpextrq
+            | iced_x86::Mnemonic::Vpextrb
+            | iced_x86::Mnemonic::Vextractf128
             | iced_x86::Mnemonic::Vmovups => RegProdCons::FirstWriteOtherRead,
             iced_x86::Mnemonic::Xor
             | iced_x86::Mnemonic::Sub
-            | iced_x86::Mnemonic::Mov
             | iced_x86::Mnemonic::Lea
             | iced_x86::Mnemonic::Shr
             | iced_x86::Mnemonic::And
@@ -212,6 +222,7 @@ pub fn get_prod_cons(m: &Mnemonic) -> RegProdCons {
             | iced_x86::Mnemonic::Shl
             | iced_x86::Mnemonic::Vfmadd231ps
             | iced_x86::Mnemonic::Vcvtpd2ps
+            | iced_x86::Mnemonic::Bts
             | iced_x86::Mnemonic::Inc => RegProdCons::FirstModifyOtherRead,
             iced_x86::Mnemonic::Vzeroupper
             | iced_x86::Mnemonic::Nop
