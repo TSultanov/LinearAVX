@@ -20,6 +20,12 @@ pub struct ControlBlock {
     pub output_xmm_registers: Vec<(Register, RegisterValue)>,
 }
 
+#[derive(Debug)]
+pub struct FunctionBlock {
+    pub control_blocks: Vec<ControlBlock>,
+    pub edges: Vec<(usize, usize)>,
+}
+
 impl ControlBlock {
     pub fn new(instructions: Vec<Instruction>) -> Self {
         let reguse = Self::construct_xmm_register_use(&instructions);
@@ -77,9 +83,10 @@ impl ControlBlock {
     }
 }
 
-fn create_control_blocks(block: &DecodedBlock) -> Vec<ControlBlock> {
+fn create_control_blocks(block: &DecodedBlock) -> Vec<(ControlBlock, Vec<u64>)> {
     let mut branch_points = HashSet::new();
     let mut branch_targets = HashSet::new();
+    let mut branches = HashMap::new();
 
     for i in &block.instructions {
         match i.flow_control() {
@@ -104,8 +111,10 @@ fn create_control_blocks(block: &DecodedBlock) -> Vec<ControlBlock> {
                         if i.flow_control() == iced_x86::FlowControl::ConditionalBranch {
                             branch_targets.insert(target);
                             branch_targets.insert(next_ip);
+                            branches.insert(i.ip(), vec![target, next_ip]);
                         } else {
                             branch_targets.insert(target);
+                            branches.insert(i.ip(), vec![target]);
                         }
                     }
                     iced_x86::OpKind::FarBranch16 => todo!(),
@@ -124,11 +133,18 @@ fn create_control_blocks(block: &DecodedBlock) -> Vec<ControlBlock> {
         let wrapped_instr = Instruction::wrap_native(i.clone());
         if branch_points.contains(&i.ip()) {
             current_block.push(wrapped_instr);
-            result.push(ControlBlock::new(current_block));
+
+            let targets = if let Some(targets) = branches.get(&i.ip()) {
+                targets.clone()
+            } else {
+                vec![]
+            };
+
+            result.push((ControlBlock::new(current_block), targets));
             current_block = Vec::new();
         } else if branch_targets.contains(&i.ip()) {
             if !current_block.is_empty() {
-                result.push(ControlBlock::new(current_block));
+                result.push((ControlBlock::new(current_block), vec![i.ip()]));
                 current_block = Vec::new();
             }
             current_block.push(wrapped_instr);
@@ -140,17 +156,34 @@ fn create_control_blocks(block: &DecodedBlock) -> Vec<ControlBlock> {
     result
 }
 
-pub fn analyze_block(block: &DecodedBlock) {
+pub fn analyze_block(block: &DecodedBlock) -> FunctionBlock {
     let blocks = create_control_blocks(block);
 
-    // let ir: Vec<_> = block
-    //     .instructions
-    //     .iter()
-    //     .map(|i| Instruction::wrap_native(*i))
-    //     .flat_map(|i| i.map())
-    //     .collect();
+    let mut block_start_num_map = HashMap::new();
 
-    for cb in blocks {
+    for i in 0..blocks.len() {
+        let block = blocks.get(i).unwrap();
+        let (first_instr, _) = block.0.instructions.first().unwrap();
+        let ip = first_instr.original_ip;
+        block_start_num_map.insert(ip, i);
+    }
+
+    let mut edges = Vec::new();
+
+    for i in 0..blocks.len() {
+        let targets = &blocks[i].1;
+        for t in targets {
+            if !block.range.contains(t) {
+                continue;
+            }
+            let target_index = block_start_num_map.get(&t).unwrap();
+            edges.push((i, *target_index));
+        }
+    }
+
+    let control_blocks: Vec<ControlBlock> = blocks.into_iter().map(|b| b.0).collect();
+
+    for cb in &control_blocks {
         println!("ControlBlock {{");
         println!("  input = {:?}", cb.input_xmm_registers);
         for i in &cb.instructions {
@@ -161,5 +194,10 @@ pub fn analyze_block(block: &DecodedBlock) {
         }
         println!("  outputs = {:?}", cb.output_xmm_registers);
         println!("}}");
+    }
+
+    FunctionBlock {
+        control_blocks,
+        edges,
     }
 }
