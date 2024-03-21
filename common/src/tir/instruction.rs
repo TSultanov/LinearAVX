@@ -3,7 +3,6 @@ use std::collections::HashSet;
 use self::mapping::{get_prod_cons, RegProdCons};
 use enum_iterator::{all, Sequence};
 use iced_x86::EncodingKind;
-use itertools::Itertools;
 pub mod mapping;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Sequence)]
@@ -132,7 +131,7 @@ impl From<VirtualRegister> for Register {
 pub enum Operand {
     Register(Register),
     BranchTarget(u64),
-    Immedaite(u64),
+    Immediate(u64),
     Memory {
         base: iced_x86::Register,
         index: iced_x86::Register,
@@ -168,7 +167,7 @@ impl Operand {
             | iced_x86::OpKind::Immediate8to16
             | iced_x86::OpKind::Immediate8to32
             | iced_x86::OpKind::Immediate8to64
-            | iced_x86::OpKind::Immediate32to64 => Operand::Immedaite(instr.immediate(op)),
+            | iced_x86::OpKind::Immediate32to64 => Operand::Immediate(instr.immediate(op)),
             iced_x86::OpKind::MemorySegSI => todo!(),
             iced_x86::OpKind::MemorySegESI => todo!(),
             iced_x86::OpKind::MemorySegRSI => todo!(),
@@ -227,7 +226,7 @@ impl Instruction {
                 Register::Virtual(_) => false,
             },
             Operand::BranchTarget(_) => false,
-            Operand::Immedaite(_) => false,
+            Operand::Immediate(_) => false,
             Operand::Memory {
                 base: _,
                 index: _,
@@ -261,6 +260,9 @@ impl Instruction {
     }
 
     pub fn get_input_xmm_regs(&self) -> Vec<Register> {
+        if self.original_instr.encoding() != EncodingKind::VEX {
+            return vec![];
+        }
         // Special cases
         match self.target_mnemonic {
             Mnemonic::Real(m) => {
@@ -310,6 +312,9 @@ impl Instruction {
     }
 
     pub fn get_output_xmm_regs(&self) -> Vec<(Register, RegisterValue)> {
+        if self.original_instr.encoding() != EncodingKind::VEX {
+            return vec![];
+        }
         // Special cases
         match self.target_mnemonic {
             Mnemonic::Real(m) => {
