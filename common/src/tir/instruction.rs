@@ -269,7 +269,9 @@ impl Instruction {
                 match m {
                     // (V)PXOR used to zero out a register - no real dependency on previous state
                     iced_x86::Mnemonic::Vpxor => {
-                        if self.operands[0] == self.operands[1] && self.operands[1] == self.operands[2] {
+                        if self.operands[0] == self.operands[1]
+                            && self.operands[1] == self.operands[2]
+                        {
                             return vec![];
                         }
                     }
@@ -321,10 +323,27 @@ impl Instruction {
                 match m {
                     // (V)PXOR used to zero out a register
                     iced_x86::Mnemonic::Vpxor => {
-                        if self.operands[0] == self.operands[1] && self.operands[1] == self.operands[2] {
+                        if self.operands[0] == self.operands[1]
+                            && self.operands[1] == self.operands[2]
+                        {
                             let op = self.operands[0];
                             if let Operand::Register(reg) = op {
-                                return vec![(reg, RegisterValue::Zero)];
+                                match reg {
+                                    Register::Native(regn) => {
+                                        return vec![
+                                            (reg, RegisterValue::Zero),
+                                            (
+                                                Register::Virtual(VirtualRegister::high_for_xmm(
+                                                    &regn,
+                                                )),
+                                                RegisterValue::Zero,
+                                            ),
+                                        ];
+                                    }
+                                    Register::Virtual(_) => {
+                                        return vec![(reg, RegisterValue::Zero)];
+                                    }
+                                }
                             }
                         }
                     }
@@ -332,7 +351,22 @@ impl Instruction {
                         if self.operands[0] == self.operands[1] {
                             let op = self.operands[0];
                             if let Operand::Register(reg) = op {
-                                return vec![(reg, RegisterValue::Zero)];
+                                match reg {
+                                    Register::Native(regn) => {
+                                        return vec![
+                                            (reg, RegisterValue::Zero),
+                                            (
+                                                Register::Virtual(VirtualRegister::high_for_xmm(
+                                                    &regn,
+                                                )),
+                                                RegisterValue::Zero,
+                                            ),
+                                        ];
+                                    }
+                                    Register::Virtual(_) => {
+                                        return vec![(reg, RegisterValue::Zero)];
+                                    }
+                                }
                             }
                         }
                     }
@@ -341,14 +375,38 @@ impl Instruction {
                     // https://learn.microsoft.com/en-us/cpp/cpp/vectorcall?view=msvc-170
                     iced_x86::Mnemonic::Call => {
                         return vec![
-                            (Register::Native(iced_x86::Register::XMM0), RegisterValue::Unknown),
-                            (Register::Virtual(VirtualRegister::XMM0H), RegisterValue::Unknown),
-                            (Register::Native(iced_x86::Register::XMM1), RegisterValue::Unknown),
-                            (Register::Virtual(VirtualRegister::XMM1H), RegisterValue::Unknown),
-                            (Register::Native(iced_x86::Register::XMM2), RegisterValue::Unknown),
-                            (Register::Virtual(VirtualRegister::XMM2H), RegisterValue::Unknown),
-                            (Register::Native(iced_x86::Register::XMM3), RegisterValue::Unknown),
-                            (Register::Virtual(VirtualRegister::XMM3H), RegisterValue::Unknown),
+                            (
+                                Register::Native(iced_x86::Register::XMM0),
+                                RegisterValue::Unknown,
+                            ),
+                            (
+                                Register::Virtual(VirtualRegister::XMM0H),
+                                RegisterValue::Unknown,
+                            ),
+                            (
+                                Register::Native(iced_x86::Register::XMM1),
+                                RegisterValue::Unknown,
+                            ),
+                            (
+                                Register::Virtual(VirtualRegister::XMM1H),
+                                RegisterValue::Unknown,
+                            ),
+                            (
+                                Register::Native(iced_x86::Register::XMM2),
+                                RegisterValue::Unknown,
+                            ),
+                            (
+                                Register::Virtual(VirtualRegister::XMM2H),
+                                RegisterValue::Unknown,
+                            ),
+                            (
+                                Register::Native(iced_x86::Register::XMM3),
+                                RegisterValue::Unknown,
+                            ),
+                            (
+                                Register::Virtual(VirtualRegister::XMM3H),
+                                RegisterValue::Unknown,
+                            ),
                         ];
                     }
                     _ => {}
