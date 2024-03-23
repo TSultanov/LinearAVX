@@ -1,17 +1,17 @@
 use std::error::Error;
 
-use crate::debugger::ProcessMemoryInterface;
+use crate::debugger::process::Process;
 
 use super::base::{Branch, DecodeContinue, DecodedBlock, Decoder};
 
 pub struct ProcessDecoder<'a> {
     bitness: u32,
-    process: &'a ProcessMemoryInterface,
+    process: &'a Process,
     default_read_size: usize,
 }
 
 impl<'a> ProcessDecoder<'_> {
-    pub fn new(process: &ProcessMemoryInterface) -> ProcessDecoder {
+    pub fn new(process: &Process) -> ProcessDecoder {
         ProcessDecoder {
             bitness: 64,
             process: process,

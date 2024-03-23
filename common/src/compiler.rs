@@ -173,61 +173,61 @@ fn create_control_blocks(block: &DecodedBlock) -> Vec<(ControlBlock, Vec<u64>)> 
     result
 }
 
-fn propagate_registers(bl: FunctionBlock) -> FunctionBlock {
-    let mut output_registers: HashMap<usize, Vec<(Register, RegisterValue)>> = HashMap::new();
+// fn propagate_registers(bl: FunctionBlock) -> FunctionBlock {
+//     let mut output_registers: HashMap<usize, Vec<(Register, RegisterValue)>> = HashMap::new();
 
-    let mut visited_blocks = HashSet::new();
-    let mut blocks_to_visit = VecDeque::new();
+//     let mut visited_blocks = HashSet::new();
+//     let mut blocks_to_visit = VecDeque::new();
 
-    blocks_to_visit.push_front((0, im::HashMap::<Register, RegisterValue>::new()));
+//     blocks_to_visit.push_front((0, im::HashMap::<Register, RegisterValue>::new()));
 
-    loop {
-        if let Some((b, outputs_seen_so_far)) = blocks_to_visit.pop_front() {
-            visited_blocks.insert(b);
+//     loop {
+//         if let Some((b, outputs_seen_so_far)) = blocks_to_visit.pop_front() {
+//             visited_blocks.insert(b);
 
-            let block = bl.control_blocks.get(b).unwrap();
-            let mut outputs_seen_so_far = outputs_seen_so_far.clone();
-            for (reg, val) in &block.output_xmm_registers {
-                outputs_seen_so_far.insert(*reg, *val);
-            }
+//             let block = bl.control_blocks.get(b).unwrap();
+//             let mut outputs_seen_so_far = outputs_seen_so_far.clone();
+//             for (reg, val) in &block.output_xmm_registers {
+//                 outputs_seen_so_far.insert(*reg, *val);
+//             }
 
-            output_registers.insert(
-                b,
-                outputs_seen_so_far
-                    .iter()
-                    .map(|(reg, value)| (reg.clone(), value.clone()))
-                    .collect_vec(),
-            );
+//             output_registers.insert(
+//                 b,
+//                 outputs_seen_so_far
+//                     .iter()
+//                     .map(|(reg, value)| (reg.clone(), value.clone()))
+//                     .collect_vec(),
+//             );
 
-            if let Some(targets) = bl.edges.get(&b) {
-                for t in targets {
-                    if !visited_blocks.contains(t) {
-                        blocks_to_visit.push_front((*t, outputs_seen_so_far.clone()));
-                    }
-                }
-            }
-        } else {
-            break;
-        }
-    }
+//             if let Some(targets) = bl.edges.get(&b) {
+//                 for t in targets {
+//                     if !visited_blocks.contains(t) {
+//                         blocks_to_visit.push_front((*t, outputs_seen_so_far.clone()));
+//                     }
+//                 }
+//             }
+//         } else {
+//             break;
+//         }
+//     }
 
-    let control_blocks = bl
-        .control_blocks
-        .into_iter()
-        .zip(0..)
-        .map(|(block, i)| ControlBlock {
-            instructions: block.instructions,
-            to_recompile: block.to_recompile,
-            input_xmm_registers: block.input_xmm_registers,
-            output_xmm_registers: output_registers.get(&i).unwrap().clone(),
-        })
-        .collect();
+//     let control_blocks = bl
+//         .control_blocks
+//         .into_iter()
+//         .zip(0..)
+//         .map(|(block, i)| ControlBlock {
+//             instructions: block.instructions,
+//             to_recompile: block.to_recompile,
+//             input_xmm_registers: block.input_xmm_registers,
+//             output_xmm_registers: output_registers.get(&i).unwrap().clone(),
+//         })
+//         .collect();
 
-    FunctionBlock {
-        control_blocks: control_blocks,
-        edges: bl.edges,
-    }
-}
+//     FunctionBlock {
+//         control_blocks: control_blocks,
+//         edges: bl.edges,
+//     }
+// }
 
 pub fn analyze_block(block: &DecodedBlock) -> FunctionBlock {
     let blocks = create_control_blocks(block);
@@ -261,10 +261,10 @@ pub fn analyze_block(block: &DecodedBlock) -> FunctionBlock {
 
     let control_blocks: Vec<ControlBlock> = blocks.into_iter().map(|b| b.0).collect();
 
-    let fb = propagate_registers(FunctionBlock {
+    let fb = FunctionBlock {
         control_blocks,
         edges,
-    });
+    };
 
     for cb in &fb.control_blocks {
         if cb.to_recompile {

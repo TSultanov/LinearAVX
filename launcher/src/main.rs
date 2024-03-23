@@ -1,5 +1,5 @@
 use common::{
-    debugger::{DebuggerCore, ProcessMemoryInterface},
+    debugger::{process::Process, DebuggerCore},
     decoder::{
         base::{BlockType, Decoder},
         process::ProcessDecoder,
@@ -63,19 +63,19 @@ fn main() {
     }
 }
 
-fn proc_created_handler(data: ProcessMemoryInterface) -> Result<(), Box<dyn Error>> {
-    println!("Base address {:#x}", data.base_address);
-    println!("Entry point {:#x}", data.entry_point);
+fn proc_created_handler(data: &Process) -> Result<(), Box<dyn Error>> {
+    // println!("Base address {:#x}", data.base_address);
+    // println!("Entry point {:#x}", data.entry_point);
 
-    let decoder = ProcessDecoder::new(&data);
+    // let decoder = ProcessDecoder::new(&data);
 
-    let blocks = decoder.decode_all_from(data.entry_point)?;
+    // let blocks = decoder.decode_all_from(data.entry_point)?;
 
-    for block in blocks {
-        block.value.pretty_print();
-    }
+    // for block in blocks {
+    //     block.value.pretty_print();
+    // }
 
-    Err("Terminate".into())
+    // Err("Terminate".into())
 
-    // Ok(())
+    Ok(())
 }
