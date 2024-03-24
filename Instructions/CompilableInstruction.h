@@ -16,8 +16,8 @@ protected:
             instr(operands[0].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
         } else if (operands[0].reg() == operands[2].reg()) {
             withPreserveXmmReg(operands[1], [=]() {
-                addpd(operands[1].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
-                instr(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
+                instr(operands[1].toEncoderOperand(upper), operands[2].toEncoderOperand(upper));
+                movups(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
             });
         } else {
             movupd(operands[0].toEncoderOperand(upper), operands[1].toEncoderOperand(upper));
