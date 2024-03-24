@@ -251,7 +251,9 @@ impl Instruction {
                             ret.push(hi)
                         }
                     }
-                    Register::Virtual(_) => todo!(),
+                    Register::Virtual(_) => {
+                        ret.push(*reg);
+                    }
                 },
                 _ => {}
             }
@@ -497,7 +499,10 @@ impl Instruction {
                     }
                 }
             },
-            Mnemonic::Regzero => todo!(),
+            Mnemonic::Regzero => Self::get_xmm_regs(self.operands.iter())
+                .into_iter()
+                .map(|r| (r, RegisterValue::Zero))
+                .collect(),
         }
     }
 }

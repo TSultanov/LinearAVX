@@ -26,6 +26,34 @@ pub struct ControlBlock {
 pub struct FunctionBlock {
     pub control_blocks: Vec<ControlBlock>,
     pub edges: HashMap<usize, Vec<usize>>,
+    range: std::ops::Range<u64>,
+}
+
+impl FunctionBlock {
+    pub fn pretty_print(&self) {
+        println!("FunctionBlock {{");
+        println!(
+            "  start = {:#x}, end = {:#x}",
+            self.range.start, self.range.end
+        );
+        for cb in &self.control_blocks {
+            if cb.to_recompile {
+                println!("  ControlBlock(VEX) {{");
+            } else {
+                println!("  ControlBlock {{");
+            }
+            println!("    input = {:?}", cb.input_xmm_registers);
+            for i in &cb.instructions {
+                println!(
+                    "    {} {:?} {:?}",
+                    i.0.original_ip, i.0.target_mnemonic, i.0.operands
+                );
+            }
+            println!("    outputs = {:?}", cb.output_xmm_registers);
+            println!("  }}");
+        }
+        println!("}}");
+    }
 }
 
 impl ControlBlock {
@@ -262,26 +290,35 @@ pub fn analyze_block(block: &DecodedBlock) -> FunctionBlock {
     let control_blocks: Vec<ControlBlock> = blocks.into_iter().map(|b| b.0).collect();
 
     let fb = FunctionBlock {
+        range: block.range.clone(),
         control_blocks,
         edges,
     };
 
-    for cb in &fb.control_blocks {
-        if cb.to_recompile {
-            println!("ControlBlock(VEX) {{");
-        } else {
-            println!("ControlBlock {{");
-        }
-        println!("  input = {:?}", cb.input_xmm_registers);
-        for i in &cb.instructions {
-            println!(
-                "  {} {:?} {:?}",
-                i.0.original_ip, i.0.target_mnemonic, i.0.operands
-            );
-        }
-        println!("  outputs = {:?}", cb.output_xmm_registers);
-        println!("}}");
-    }
-
     fb
+}
+
+pub fn recompile_block(fb: FunctionBlock) -> FunctionBlock {
+    let cbs = fb
+        .control_blocks
+        .iter()
+        .map(|cb| recompile_control_block(cb))
+        .collect();
+
+    FunctionBlock {
+        control_blocks: cbs,
+        edges: fb.edges,
+        range: fb.range,
+    }
+}
+
+fn recompile_control_block(cb: &ControlBlock) -> ControlBlock {
+    let instructions_no_ymm = cb
+        .instructions
+        .iter()
+        // .flat_map(|(i, _)| i.eliminate_ymm_by_splitting(true))
+        .flat_map(|(i, _)| i.map())
+        // .map(|(i, _)| i.clone())
+        .collect();
+    ControlBlock::new(instructions_no_ymm)
 }

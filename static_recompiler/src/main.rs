@@ -29,9 +29,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let blocks = text_decoder.decode_all_from(entry)?;
     for block in blocks {
-        if block.value.needs_recompiling() && block.value.range.start == 0x141fb09a0 /*0x1401cd710*/ {
+        if block.value.needs_recompiling() {
             // block.value.pretty_print();
-            analyze_block(&block.value);
+            let fb = analyze_block(&block.value);
+            fb.pretty_print();
             break;
         }
     }

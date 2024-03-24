@@ -1,9 +1,8 @@
 use common::{
-    debugger::{process::Process, DebuggerCore},
-    decoder::{
+    compiler::{analyze_block, recompile_block}, debugger::{process::Process, DebuggerCore}, decoder::{
         base::{BlockType, Decoder},
         process::ProcessDecoder,
-    },
+    }
 };
 use std::{env, error::Error, mem::MaybeUninit};
 use windows::{
@@ -64,18 +63,21 @@ fn main() {
 }
 
 fn proc_created_handler(data: &Process) -> Result<(), Box<dyn Error>> {
-    // println!("Base address {:#x}", data.base_address);
-    // println!("Entry point {:#x}", data.entry_point);
+    println!("Base address {:#x}", data.base_address);
+    println!("Entry point {:#x}", data.entry_point);
 
-    // let decoder = ProcessDecoder::new(&data);
+    let decoder = ProcessDecoder::new(&data);
 
-    // let blocks = decoder.decode_all_from(data.entry_point)?;
+    let blocks = decoder.decode_all_from(data.entry_point)?;
 
-    // for block in blocks {
-    //     block.value.pretty_print();
-    // }
+    for block in blocks {
+        if block.value.needs_recompiling() {
+            let fb = analyze_block(&block.value);
+            let fb = recompile_block(fb);
+            fb.pretty_print();
+            break;
+        }
+    }
 
-    // Err("Terminate".into())
-
-    Ok(())
+    Err("Terminate".into())
 }

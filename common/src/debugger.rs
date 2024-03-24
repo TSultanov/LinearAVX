@@ -125,9 +125,6 @@ impl DebuggerCore {
             // let context = process.get_thread(tid).unwrap().get_context().unwrap();
             // println!("Start RIP = {:#x}", context.ctx.Rip);
             self.active_processes.insert(process.pid, process);
-
-            (self.process_created_handler)(self.active_processes.get(&pid).unwrap())
-                .expect("Failed to execute callback");
         }
         false
     }
@@ -149,6 +146,10 @@ impl DebuggerCore {
                 panic!("TLS allcoation failed: mismatched canary");
             }
             println!("TLS allocated at index {}", tls_index);
+
+            (self.process_created_handler)(self.active_processes.get(&pid).unwrap())
+                .expect("Failed to execute callback");
+
             DBG_CONTINUE
         } else {
             if addr == process.entry_point {

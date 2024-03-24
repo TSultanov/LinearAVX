@@ -1,3 +1,6 @@
+use iced_x86::EncodingKind;
+use itertools::Itertools;
+
 use super::{Instruction, Mnemonic, Operand, Register, VirtualRegister};
 
 fn add_zeroupper(vec: Vec<Instruction>, op: Operand) -> Vec<Instruction> {
@@ -17,33 +20,150 @@ fn add_zeroupper(vec: Vec<Instruction>, op: Operand) -> Vec<Instruction> {
 }
 
 impl Instruction {
-    pub fn map(self) -> Vec<Instruction> {
-        match self.target_mnemonic {
-            super::Mnemonic::Real(mnemonic) => match mnemonic {
-                iced_x86::Mnemonic::INVALID => panic!("Invalid instruction"),
-                iced_x86::Mnemonic::Vmovups => {
-                    let new_op = Self {
-                        target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Movups),
-                        ..self
-                    };
-                    let no_ymm = new_op.eliminate_ymm_by_splitting(true);
-                    no_ymm
-                }
-                iced_x86::Mnemonic::Vmovsd => {
-                    let new_op = Self {
-                        target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Movsd),
-                        ..self
-                    };
-                    let no_ymm = new_op.eliminate_ymm_by_splitting(true);
-                    no_ymm
-                }
-                _ => vec![self],
+    fn with_preserve_xmm_reg(&self, reg: Operand, instr: Vec<Instruction>) -> Vec<Instruction> {
+        let rsp = Operand::Register(Register::Native(iced_x86::Register::RSP));
+        let start = vec![
+            Self {
+                target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Sub),
+                operands: vec![rsp, Operand::Immediate(16)],
+                ..self.clone()
             },
-            super::Mnemonic::Regzero => todo!(),
+            Self {
+                target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Movdqu),
+                operands: vec![
+                    Operand::Memory {
+                        base: iced_x86::Register::RSP,
+                        index: iced_x86::Register::None,
+                        scale: 0,
+                        displacement: 0,
+                    },
+                    reg,
+                ],
+                ..self.clone()
+            },
+        ];
+
+        let finish = vec![
+            Self {
+                target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Movdqu),
+                operands: vec![
+                    reg,
+                    Operand::Memory {
+                        base: iced_x86::Register::RSP,
+                        index: iced_x86::Register::None,
+                        scale: 0,
+                        displacement: 0,
+                    },
+                ],
+                ..self.clone()
+            },
+            Self {
+                target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Add),
+                operands: vec![rsp, Operand::Immediate(16)],
+                ..self.clone()
+            },
+        ];
+
+        start
+            .into_iter()
+            .chain(instr.into_iter())
+            .chain(finish.into_iter())
+            .collect_vec()
+    }
+
+    fn map3opto2op(&self, new_mnemonic: iced_x86::Mnemonic) -> Vec<Instruction> {
+        let tm = Mnemonic::Real(new_mnemonic);
+        if self.operands.len() == 2 {
+            vec![Self {
+                target_mnemonic: tm,
+                ..self.clone()
+            }]
+        } else if self.operands.len() == 3 {
+            if self.operands[0] == self.operands[1] {
+                vec![Self {
+                    target_mnemonic: tm,
+                    operands: vec![self.operands[0], self.operands[2]],
+                    ..self.clone()
+                }]
+            } else if self.operands[0] == self.operands[2] {
+                self.with_preserve_xmm_reg(
+                    self.operands[1],
+                    vec![
+                        Self {
+                            target_mnemonic: tm,
+                            operands: vec![self.operands[1], self.operands[2]],
+                            ..self.clone()
+                        },
+                        Self {
+                            target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Movups),
+                            operands: vec![self.operands[0], self.operands[1]],
+                            ..self.clone()
+                        },
+                    ],
+                )
+            } else {
+                vec![
+                    Self {
+                        target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Movups),
+                        operands: vec![self.operands[0], self.operands[1]],
+                        ..self.clone()
+                    },
+                    Self {
+                        target_mnemonic: tm,
+                        operands: vec![self.operands[0], self.operands[2]],
+                        ..self.clone()
+                    },
+                ]
+            }
+        } else {
+            todo!();
         }
     }
 
-    pub fn eliminate_ymm_by_splitting(self, zeroupper: bool) -> Vec<Self> {
+    pub fn map(&self) -> Vec<Instruction> {
+        if self.original_instr.encoding() == EncodingKind::VEX {
+            match self.target_mnemonic {
+                super::Mnemonic::Real(mnemonic) => match mnemonic {
+                    iced_x86::Mnemonic::INVALID => panic!("Invalid instruction"),
+                    iced_x86::Mnemonic::Vmovups => {
+                        let ops = self.eliminate_ymm_by_splitting(true);
+
+                        ops.iter()
+                            .flat_map(|i| i.map3opto2op(iced_x86::Mnemonic::Movups))
+                            .collect()
+                    }
+                    iced_x86::Mnemonic::Vmovsd => {
+                        let new_op = Self {
+                            target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Movsd),
+                            ..self.clone()
+                        };
+                        let no_ymm = new_op.eliminate_ymm_by_splitting(true);
+                        no_ymm
+                    }
+                    iced_x86::Mnemonic::Vmovq => {
+                        let new_op = Self {
+                            target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Movq),
+                            ..self.clone()
+                        };
+                        let no_ymm = new_op.eliminate_ymm_by_splitting(true);
+                        no_ymm
+                    }
+                    _ => {
+                        println!("map: \"{:?}\" not implemented", mnemonic);
+                        todo!();
+                    }
+                },
+                super::Mnemonic::Regzero => {
+                    println!("Regzero! TODO FIXME");
+                    todo!()
+                }
+            }
+        } else {
+            vec![self.clone()]
+        }
+    }
+
+    pub fn eliminate_ymm_by_splitting(&self, zeroupper: bool) -> Vec<Self> {
         if !self.has_ymm() {
             // This is cursed
             return if let Some(first_op) = self.operands.first() {
@@ -53,20 +173,20 @@ impl Instruction {
                             Register::Native(reg) => {
                                 if reg.is_xmm() {
                                     let reg = Register::Virtual(VirtualRegister::high_for_xmm(reg));
-                                    add_zeroupper(vec![self], Operand::Register(reg))
+                                    add_zeroupper(vec![self.clone()], Operand::Register(reg))
                                 } else {
-                                    vec![self]
+                                    vec![self.clone()]
                                 }
                             }
-                            Register::Virtual(_) => vec![self],
+                            Register::Virtual(_) => vec![self.clone()],
                         },
-                        _ => vec![self],
+                        _ => vec![self.clone()],
                     }
                 } else {
-                    vec![self]
+                    vec![self.clone()]
                 }
             } else {
-                vec![self]
+                vec![self.clone()]
             };
         }
 
@@ -208,6 +328,7 @@ pub fn get_prod_cons(m: &Mnemonic) -> RegProdCons {
             | iced_x86::Mnemonic::Vpxor
             | iced_x86::Mnemonic::Vmovd
             | iced_x86::Mnemonic::Vmovq
+            | iced_x86::Mnemonic::Movq
             | iced_x86::Mnemonic::Vpextrq
             | iced_x86::Mnemonic::Vpextrb
             | iced_x86::Mnemonic::Vextractf128
@@ -223,6 +344,7 @@ pub fn get_prod_cons(m: &Mnemonic) -> RegProdCons {
             // | iced_x86::Mnemonic::Bts
             // | iced_x86::Mnemonic::Inc
             iced_x86::Mnemonic::Vfmadd231ps
+            | iced_x86::Mnemonic::Movsd
             | iced_x86::Mnemonic::Vcvtpd2ps => RegProdCons::FirstModifyOtherRead,
             // | iced_x86::Mnemonic::Nop
             // | iced_x86::Mnemonic::Ret 
