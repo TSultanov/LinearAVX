@@ -1,15 +1,30 @@
-use std::{collections::HashMap, ffi::c_void, mem::{size_of, MaybeUninit}, ptr::addr_of_mut};
+use std::{
+    arch::asm,
+    collections::HashMap,
+    error::Error,
+    ffi::c_void,
+    mem::{size_of, MaybeUninit},
+    ptr::addr_of_mut,
+};
 
+use enum_iterator::cardinality;
+use iced_x86::code_asm::{ebx, rax, CodeAssembler};
 use windows::{
-    core::*,
+    core::{HSTRING, PCSTR, PWSTR},
     Win32::{
-        Foundation::*,
+        Foundation::{CACHE_S_FORMATETC_NOTSUPPORTED, HANDLE},
         System::{
             Diagnostics::Debug::{
-                GetThreadContext, ReadProcessMemory, WriteProcessMemory, CONTEXT, CREATE_PROCESS_DEBUG_INFO, CREATE_THREAD_DEBUG_INFO
+                FlushInstructionCache, GetThreadContext, ReadProcessMemory, SetThreadContext,
+                WriteProcessMemory, CONTEXT, CONTEXT_ALL_AMD64, CREATE_PROCESS_DEBUG_INFO,
+                CREATE_THREAD_DEBUG_INFO,
             },
+            LibraryLoader::{GetModuleHandleA, GetModuleHandleW, GetProcAddress, LoadLibraryW},
+            Memory::{VirtualAllocEx, MEM_COMMIT, MEM_RESERVE, PAGE_EXECUTE_READWRITE},
             Threading::{
-                GetProcessId, GetProcessInformation, GetThreadId, ProcessMachineTypeInfo, SuspendThread, PROCESS_INFORMATION_CLASS, PROCESS_MACHINE_INFORMATION
+                GetProcessId, GetProcessInformation, GetThreadId, ProcessMachineTypeInfo,
+                ResumeThread, SuspendThread, TlsAlloc, PROCESS_INFORMATION_CLASS,
+                PROCESS_MACHINE_INFORMATION,
             },
         },
     },
@@ -34,14 +49,26 @@ impl Thread {
         unsafe { SuspendThread(self.h_thread) };
     }
 
-    pub fn get_context(&self) -> Result<CONTEXT> {
-        let context = unsafe {
-            let mut context = MaybeUninit::<CONTEXT>::zeroed();
-            GetThreadContext(self.h_thread, context.as_mut_ptr())?;
-            context.assume_init()
-        };
-        Ok(context)
+    pub fn resume(&self) {
+        unsafe { ResumeThread(self.h_thread) };
     }
+
+    pub fn get_context(&self) -> Result<AlignedContext, Box<dyn Error>> {
+        let mut ctx = AlignedContext::default();
+        ctx.ctx.ContextFlags = CONTEXT_ALL_AMD64;
+        unsafe { GetThreadContext(self.h_thread, &mut ctx.ctx)? };
+        Ok(ctx)
+    }
+
+    pub fn set_context(&self, context: &AlignedContext) -> Result<(), windows::core::Error> {
+        unsafe { SetThreadContext(self.h_thread, &context.ctx) }
+    }
+}
+
+#[repr(align(16))]
+#[derive(Default, Clone)]
+pub struct AlignedContext {
+    pub ctx: CONTEXT,
 }
 
 pub struct Process {
@@ -51,6 +78,7 @@ pub struct Process {
     pub machine_info: PROCESS_MACHINE_INFORMATION,
     h_process: HANDLE,
     threads: HashMap<u32, Thread>,
+    breakpoints: HashMap<u64, u8>,
 }
 
 impl Process {
@@ -73,8 +101,9 @@ impl Process {
                 process_info.hProcess,
                 ProcessMachineTypeInfo,
                 mi.as_mut_ptr() as *mut c_void,
-                size_of::<PROCESS_MACHINE_INFORMATION>() as u32
-            ).expect("Failed to fetch machine information for process");
+                size_of::<PROCESS_MACHINE_INFORMATION>() as u32,
+            )
+            .expect("Failed to fetch machine information for process");
             mi.assume_init()
         };
 
@@ -85,6 +114,7 @@ impl Process {
             h_process: process_info.hProcess,
             threads: threads,
             machine_info: mi,
+            breakpoints: HashMap::new(),
         }
     }
 
@@ -97,7 +127,33 @@ impl Process {
         self.threads.remove(&tid);
     }
 
-    pub fn read_memory(&self, addr: u64, size: usize) -> Result<Vec<u8>> {
+    pub fn breakpoint_set(&mut self, addr: u64) -> Result<(), Box<dyn Error>> {
+        let real_byte = self.read_memory(addr, 1)?;
+        self.write_memory(addr, &vec![0xcc])?;
+        self.breakpoints.insert(addr, *real_byte.first().unwrap());
+        Ok(())
+    }
+
+    pub fn breakpoint_remove(&mut self, addr: u64) -> Result<(), Box<dyn Error>> {
+        if let Some(real_byte) = self.breakpoints.get(&addr) {
+            self.write_memory(addr, &vec![*real_byte])?;
+        }
+        Ok(())
+    }
+
+    pub fn alloc_memory_rwx(&self, size: usize) -> u64 {
+        unsafe {
+            VirtualAllocEx(
+                self.h_process,
+                None,
+                size,
+                MEM_COMMIT | MEM_RESERVE,
+                PAGE_EXECUTE_READWRITE,
+            ) as u64
+        }
+    }
+
+    pub fn read_memory(&self, addr: u64, size: usize) -> Result<Vec<u8>, Box<dyn Error>> {
         let mut memory: Vec<u8> = Vec::with_capacity(size);
         unsafe {
             let mut bytes_read = 0;
@@ -113,7 +169,7 @@ impl Process {
         Ok(memory)
     }
 
-    pub fn write_memory(&self, addr: u64, data: &[u8]) -> Result<()> {
+    pub fn write_memory(&self, addr: u64, data: &[u8]) -> Result<(), Box<dyn Error>> {
         unsafe {
             WriteProcessMemory(
                 self.h_process,
@@ -122,30 +178,67 @@ impl Process {
                 data.len(),
                 None,
             )?;
+            FlushInstructionCache(self.h_process, Some(addr as *const c_void), data.len())?;
         }
         Ok(())
     }
 
-    pub fn get_thread(&mut self, tid: u32) -> Option<&mut Thread> {
-        self.threads.get_mut(&tid)
+    pub fn get_thread(&self, tid: u32) -> Option<&Thread> {
+        self.threads.get(&tid)
     }
 
-    pub fn alloc_tls(&mut self, tid: u32) {
-        // Suspend all threads
+    pub fn suspend(&self) {
         for (_, thread) in &self.threads {
             thread.suspend();
         }
+    }
 
-        if let Some(thread) = self.get_thread(tid) {
-            // Save thread context
-            let context = thread.get_context().unwrap();
-            println!("{}", context.Rip);
-            // Set thread context to run a function which allocates TLS
-            // Resume thread
-            // Handle breakpoint
-            // Suspend thread
-            // Restore thread context
-            // Resume all threads
+    pub fn resume(&self) {
+        for (_, thread) in &self.threads {
+            thread.resume();
         }
     }
+
+    pub fn set_alloc_tls_execution(&mut self, tid: u32) -> Option<AlignedContext> {
+        if let Some(thread) = self.get_thread(tid) {
+            // Save thread context
+            let mut context = thread.get_context().unwrap();
+            context.ctx.Rip -= 1;
+            println!("RIP = {:#x}", context.ctx.Rip);
+
+            let mut new_context = context.clone();
+
+            let exec_addr = self.alloc_memory_rwx(20);
+            let shellcode = jit_tls_alloc(exec_addr).unwrap();
+            self.write_memory(exec_addr, &shellcode).unwrap();
+
+            new_context.ctx.Rip = exec_addr as u64;
+            println!("new RIP = {:#x}", new_context.ctx.Rip);
+
+            thread.set_context(&new_context).unwrap();
+
+            Some(context)
+        } else {
+            None
+        }
+    }
+}
+
+fn jit_tls_alloc(base_addr: u64) -> Result<Vec<u8>, Box<dyn Error>> {
+    // Abuse the fact that kernel32.dll is loaded at the same base address in every x64 process
+    let module_name = HSTRING::from("kernel32.dll");
+    let module = unsafe { GetModuleHandleW(&module_name)? };
+    let proc_name = "TlsAlloc\0";
+    let proc_address = unsafe { GetProcAddress(module, PCSTR::from_raw(proc_name.as_ptr())).unwrap() } as u64;
+
+    let mut a = CodeAssembler::new(64)?;
+    a.mov(rax, proc_address)?; // 10B
+    a.call(rax)?; // 2B
+    a.mov(ebx, 0xdeadf00d as u32)?; // 5B
+    a.int3()?; // 1B
+    a.int3()?; // 1B
+    a.int3()?; // 1B
+    // 20B total
+
+    Ok(a.assemble(base_addr)?)
 }

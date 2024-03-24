@@ -1,6 +1,7 @@
 use std::{collections::HashMap, mem::MaybeUninit, ptr::addr_of_mut};
 pub mod process;
 
+use im::HashSet;
 use windows::{
     core::*,
     Win32::{
@@ -14,10 +15,12 @@ use windows::{
     },
 };
 
-use self::process::Process;
+use self::process::{AlignedContext, Process};
 
 pub struct DebuggerCore {
     active_processes: HashMap<u32, Process>,
+    tls_allocation_awaiting: HashMap<u32, AlignedContext>,
+    tls_allocated_pids: HashSet<u32>,
     process_created_handler:
         Box<dyn Fn(&Process) -> core::result::Result<(), Box<dyn std::error::Error>>>,
 }
@@ -30,6 +33,8 @@ impl DebuggerCore {
     ) -> DebuggerCore {
         DebuggerCore {
             active_processes: HashMap::new(),
+            tls_allocation_awaiting: HashMap::new(),
+            tls_allocated_pids: HashSet::new(),
             process_created_handler,
         }
     }
@@ -68,7 +73,6 @@ impl DebuggerCore {
             .get_mut(&pid)
             .expect("Unexpected CREATE_THREAD event from unknown process");
         process.add_thread(&create_thread_info);
-        process.alloc_tls(tid);
     }
 
     fn handle_thread_exit(&mut self, pid: u32, tid: u32) {
@@ -112,10 +116,14 @@ impl DebuggerCore {
         if !create_process_info.hProcess.is_invalid() {
             let mut process = Process::new(&create_process_info);
 
-            println!("Created process {} {}", process.pid, image_name);
+            println!(
+                "Created process {} {}, entry_point = {:#x}, base_address = {:#x}",
+                process.pid, image_name, process.entry_point, process.base_address
+            );
+            process.breakpoint_set(process.entry_point).unwrap();
 
-            process.alloc_tls(tid);
-
+            // let context = process.get_thread(tid).unwrap().get_context().unwrap();
+            // println!("Start RIP = {:#x}", context.ctx.Rip);
             self.active_processes.insert(process.pid, process);
 
             (self.process_created_handler)(self.active_processes.get(&pid).unwrap())
@@ -124,20 +132,54 @@ impl DebuggerCore {
         false
     }
 
+    fn handle_breakpoint(&mut self, pid: u32, tid: u32, record: EXCEPTION_RECORD) -> NTSTATUS {
+        let addr = record.ExceptionAddress as u64;
+        let process = self.active_processes.get_mut(&pid).unwrap();
+        let thread = process.get_thread(tid).unwrap();
+        if let Some(context) = self.tls_allocation_awaiting.get(&tid) {
+            // thread.suspend();
+            let old_context = thread.get_context().unwrap();
+            let _ = thread.set_context(context);
+            // process.resume();
+
+            let tls_index = old_context.ctx.Rax;
+            let canary = old_context.ctx.Rbx;
+            if canary != 0xdeadf00d {
+                // TODO randomize canary
+                panic!("TLS allcoation failed: mismatched canary");
+            }
+            println!("TLS allocated at index {}", tls_index);
+            DBG_CONTINUE
+        } else {
+            if addr == process.entry_point {
+                process.breakpoint_remove(process.entry_point).unwrap();
+                println!("Set TlsAlloc execution");
+                let context = process.set_alloc_tls_execution(tid).unwrap();
+                self.tls_allocation_awaiting.insert(tid, context);
+                DBG_CONTINUE
+            } else {
+                println!("Unknown breakpoint at {:#x}", addr as u64);
+                DBG_EXCEPTION_NOT_HANDLED
+            }
+        }
+    }
+
     fn handle_exception(
-        &self,
+        &mut self,
         debug_ev: DEBUG_EVENT,
         exception_info: EXCEPTION_DEBUG_INFO,
     ) -> NTSTATUS {
         let exception_record = exception_info.ExceptionRecord;
         let exception_code = exception_record.ExceptionCode;
+        let pid = debug_ev.dwProcessId;
+        let tid = debug_ev.dwThreadId;
 
         match exception_code {
             EXCEPTION_ACCESS_VIOLATION => {
                 println!("Access violation");
             }
             EXCEPTION_BREAKPOINT => {
-                println!("Breakpoint");
+                return self.handle_breakpoint(pid, tid, exception_record);
             }
             EXCEPTION_DATATYPE_MISALIGNMENT => {
                 println!("Datatype misalignment");
