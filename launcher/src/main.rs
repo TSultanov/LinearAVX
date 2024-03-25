@@ -1,5 +1,5 @@
 use common::{
-    compiler::{analyze_block, recompile_block}, debugger::{process::Process, DebuggerCore}, decoder::{
+    compiler::{analyze_block, translate_block}, debugger::{process::Process, DebuggerCore}, decoder::{
         base::{BlockType, Decoder},
         process::ProcessDecoder,
     }
@@ -73,7 +73,7 @@ fn proc_created_handler(data: &Process) -> Result<(), Box<dyn Error>> {
     for block in blocks {
         if block.value.needs_recompiling() {
             let fb = analyze_block(&block.value);
-            let fb = recompile_block(fb);
+            // let fb = translate_block(fb);
             fb.pretty_print();
             break;
         }

@@ -1,9 +1,10 @@
 use std::collections::HashSet;
 
-use self::mapping::{get_prod_cons, RegProdCons};
 use enum_iterator::{all, Sequence};
-use iced_x86::EncodingKind;
+use iced_x86::{EncodingKind, InstructionInfoFactory, OpAccess};
+use im::hashset::Iter;
 pub mod mapping;
+mod table;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Sequence)]
 pub enum VirtualRegister {
@@ -236,35 +237,18 @@ impl Instruction {
         })
     }
 
-    fn get_xmm_regs<'a, T: Iterator<Item = &'a Operand>>(operands: T) -> Vec<Register> {
-        let mut ret = Vec::new();
-        for op in operands {
-            match op {
-                Operand::Register(reg) => match reg {
-                    Register::Native(reg) => {
-                        if reg.is_xmm() {
-                            ret.push((*reg).into());
-                        }
-                        if reg.is_ymm() {
-                            let (lo, hi) = VirtualRegister::pair_for_ymm(&reg);
-                            ret.push(lo);
-                            ret.push(hi)
-                        }
-                    }
-                    Register::Virtual(_) => {
-                        ret.push(*reg);
-                    }
-                },
-                _ => {}
-            }
+    fn map_xmm_regs(reg: &iced_x86::Register) -> Vec<Register> {
+        if reg.is_xmm() {
+            vec![(*reg).into()]
+        } else if reg.is_ymm() {
+            let (lo, hi) = VirtualRegister::pair_for_ymm(reg);
+            vec![lo, hi]
+        } else {
+            vec![]
         }
-        ret
     }
 
-    pub fn get_input_xmm_regs(&self) -> Vec<Register> {
-        if self.original_instr.encoding() != EncodingKind::VEX {
-            return vec![];
-        }
+    pub fn get_input_regs(&self) -> Vec<Register> {
         // Special cases
         match self.target_mnemonic {
             Mnemonic::Real(m) => {
@@ -306,19 +290,31 @@ impl Instruction {
             _ => {}
         }
 
-        let pc = get_prod_cons(&self.target_mnemonic);
-        match pc {
-            RegProdCons::AllRead => Self::get_xmm_regs(self.operands.iter()),
-            RegProdCons::FirstModifyOtherRead => Self::get_xmm_regs(self.operands.iter()),
-            RegProdCons::FirstWriteOtherRead => Self::get_xmm_regs(self.operands.iter().skip(1)),
-            RegProdCons::None => vec![],
-        }
+        let mut info_factory = InstructionInfoFactory::new();
+        let info = info_factory.info(&self.original_instr);
+
+        let input_regs = (0..self.original_instr.op_count())
+            .map(|i| {
+                let op_access = info.op_access(i);
+                let reg = self.original_instr.op_register(i);
+                (op_access, reg)
+            })
+            .filter(|(op_access, reg)| match op_access {
+                OpAccess::None => false,
+                OpAccess::Read => true,
+                OpAccess::CondRead => true,
+                OpAccess::Write => false,
+                OpAccess::CondWrite => true,
+                OpAccess::ReadWrite => true,
+                OpAccess::ReadCondWrite => true,
+                OpAccess::NoMemAccess => false,
+            })
+            .flat_map(|(_, reg)| Self::map_xmm_regs(&reg));
+
+        input_regs.collect()
     }
 
-    pub fn get_output_xmm_regs(&self) -> Vec<(Register, RegisterValue)> {
-        if self.original_instr.encoding() != EncodingKind::VEX {
-            return vec![];
-        }
+    pub fn get_output_regs(&self) -> Vec<(Register, RegisterValue)> {
         // Special cases
         match self.target_mnemonic {
             Mnemonic::Real(m) => {
@@ -335,9 +331,7 @@ impl Instruction {
                                         return vec![
                                             (reg, RegisterValue::Zero),
                                             (
-                                                Register::Virtual(VirtualRegister::high_for_xmm(
-                                                    &regn,
-                                                )),
+                                                VirtualRegister::high_for_xmm(&regn).into(),
                                                 RegisterValue::Zero,
                                             ),
                                         ];
@@ -358,9 +352,7 @@ impl Instruction {
                                         return vec![
                                             (reg, RegisterValue::Zero),
                                             (
-                                                Register::Virtual(VirtualRegister::high_for_xmm(
-                                                    &regn,
-                                                )),
+                                                VirtualRegister::high_for_xmm(&regn).into(),
                                                 RegisterValue::Zero,
                                             ),
                                         ];
@@ -417,92 +409,35 @@ impl Instruction {
             _ => {}
         }
 
-        match self.target_mnemonic {
-            Mnemonic::Real(m) => match m {
-                iced_x86::Mnemonic::Vzeroupper => all::<VirtualRegister>()
-                    .map(|r| (Register::Virtual(r), RegisterValue::Zero))
-                    .collect(),
-                _ => {
-                    let pc = get_prod_cons(&self.target_mnemonic);
-                    match pc {
-                        RegProdCons::AllRead => {
-                            vec![]
-                        }
-                        RegProdCons::FirstModifyOtherRead => {
-                            let ret: Vec<(Register, RegisterValue)> =
-                                Self::get_xmm_regs(self.operands.iter().take(1))
-                                    .into_iter()
-                                    .map(|r| (r, RegisterValue::Unknown))
-                                    .collect();
+        let mut info_factory = InstructionInfoFactory::new();
+        let info = info_factory.info(&self.original_instr);
 
-                            let mut xmmregs = HashSet::new();
-                            for r in &ret {
-                                xmmregs.insert(r.0);
-                            }
-                            if self.original_instr.encoding() == EncodingKind::VEX {
-                                let high_zero: Vec<(Register, RegisterValue)> = ret
-                                    .iter()
-                                    .filter_map(|r| match r.0 {
-                                        Register::Native(reg) => {
-                                            let high_xmm = Register::Virtual(
-                                                VirtualRegister::high_for_xmm(&reg),
-                                            );
-                                            if xmmregs.contains(&high_xmm) {
-                                                return None;
-                                            }
-
-                                            Some((high_xmm, RegisterValue::Zero))
-                                        }
-                                        Register::Virtual(_) => None,
-                                    })
-                                    .collect();
-                                ret.into_iter().chain(high_zero.into_iter()).collect()
-                            } else {
-                                ret
-                            }
-                        }
-                        RegProdCons::FirstWriteOtherRead => {
-                            let ret: Vec<(Register, RegisterValue)> =
-                                Self::get_xmm_regs(self.operands.iter().take(1))
-                                    .into_iter()
-                                    .map(|r| (r, RegisterValue::Unknown))
-                                    .collect();
-                            let mut xmmregs = HashSet::new();
-                            for r in &ret {
-                                xmmregs.insert(r.0);
-                            }
-                            if self.original_instr.encoding() == EncodingKind::VEX {
-                                let high_zero: Vec<(Register, RegisterValue)> = ret
-                                    .iter()
-                                    .filter_map(|r| match r.0 {
-                                        Register::Native(reg) => {
-                                            let high_xmm = Register::Virtual(
-                                                VirtualRegister::high_for_xmm(&reg),
-                                            );
-                                            if xmmregs.contains(&high_xmm) {
-                                                return None;
-                                            }
-
-                                            Some((high_xmm, RegisterValue::Zero))
-                                        }
-                                        Register::Virtual(_) => None,
-                                    })
-                                    .collect();
-                                ret.into_iter().chain(high_zero.into_iter()).collect()
-                            } else {
-                                ret
-                            }
-                        }
-                        RegProdCons::None => {
-                            vec![]
-                        }
+        let input_regs = (0..self.original_instr.op_count())
+            .map(|i| {
+                let op_access = info.op_access(i);
+                let reg = self.original_instr.op_register(i);
+                (op_access, reg)
+            })
+            .filter(|(op_access, _)| match op_access {
+                OpAccess::None => false,
+                OpAccess::Read => false,
+                OpAccess::CondRead => false,
+                OpAccess::Write => true,
+                OpAccess::CondWrite => true,
+                OpAccess::ReadWrite => true,
+                OpAccess::ReadCondWrite => true,
+                OpAccess::NoMemAccess => false,
+            })
+            .flat_map(|(_, reg)| {
+                Self::map_xmm_regs(&reg).into_iter().flat_map(move |r| {
+                    if reg.is_xmm() && self.original_instr.encoding() == EncodingKind::VEX {
+                        vec![(r, RegisterValue::Unknown), (VirtualRegister::high_for_xmm(&reg).into(), RegisterValue::Zero)]
+                    } else {
+                        vec![(r, RegisterValue::Unknown)]
                     }
-                }
-            },
-            Mnemonic::Regzero => Self::get_xmm_regs(self.operands.iter())
-                .into_iter()
-                .map(|r| (r, RegisterValue::Zero))
-                .collect(),
-        }
+                })
+            });
+
+        input_regs.collect()
     }
 }

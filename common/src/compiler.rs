@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use iced_x86::EncodingKind;
+use iced_x86::{code_asm::CodeAssembler, EncodingKind};
 use itertools::Itertools;
 
 use crate::{
@@ -75,8 +75,8 @@ impl ControlBlock {
         instructions
             .iter()
             .map(|i| RegisterUse {
-                input: i.get_input_xmm_regs(),
-                output: i.get_output_xmm_regs(),
+                input: i.get_input_regs(),
+                output: i.get_output_regs(),
             })
             .collect()
     }
@@ -298,11 +298,11 @@ pub fn analyze_block(block: &DecodedBlock) -> FunctionBlock {
     fb
 }
 
-pub fn recompile_block(fb: FunctionBlock) -> FunctionBlock {
+pub fn translate_block(fb: FunctionBlock) -> FunctionBlock {
     let cbs = fb
         .control_blocks
         .iter()
-        .map(|cb| recompile_control_block(cb))
+        .map(|cb| translate_control_block(cb))
         .collect();
 
     FunctionBlock {
@@ -312,7 +312,7 @@ pub fn recompile_block(fb: FunctionBlock) -> FunctionBlock {
     }
 }
 
-fn recompile_control_block(cb: &ControlBlock) -> ControlBlock {
+fn translate_control_block(cb: &ControlBlock) -> ControlBlock {
     let instructions_no_ymm = cb
         .instructions
         .iter()
@@ -322,3 +322,23 @@ fn recompile_control_block(cb: &ControlBlock) -> ControlBlock {
         .collect();
     ControlBlock::new(instructions_no_ymm)
 }
+
+// fn assemble(instr: &Instruction) -> Vec<iced_x86::Instruction> {
+//     match instr.target_mnemonic {
+//         crate::tir::Mnemonic::Real(rm) => {
+//             if rm != instr.original_instr.mnemonic() {
+//                 match rm {
+//                     iced_x86::Mnemonic::Movsd => {}
+//                     _ => todo!(),
+//                 }
+//             } else {
+//                 let inst = instr.original_instr.clone();
+//                 inst.set_ip(0);
+//                 vec![inst]
+//             }
+//         }
+//         crate::tir::Mnemonic::Regzero => todo!(),
+//     }
+// }
+
+pub fn compile_block(fb: &FunctionBlock) {}
