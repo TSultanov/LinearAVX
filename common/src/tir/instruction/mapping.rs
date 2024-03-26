@@ -1,7 +1,7 @@
 use iced_x86::EncodingKind;
 use itertools::Itertools;
 
-use super::{Instruction, Mnemonic, Operand, Register, VirtualRegister};
+use super::{table::get_mapping, Instruction, Mnemonic, Operand, Register, VirtualRegister};
 
 fn add_zeroupper(vec: Vec<Instruction>, op: Operand) -> Vec<Instruction> {
     let mut result = Vec::new();
@@ -20,143 +20,18 @@ fn add_zeroupper(vec: Vec<Instruction>, op: Operand) -> Vec<Instruction> {
 }
 
 impl Instruction {
-    fn with_preserve_xmm_reg(&self, reg: Operand, instr: Vec<Instruction>) -> Vec<Instruction> {
-        let rsp = Operand::Register(Register::Native(iced_x86::Register::RSP));
-        let start = vec![
-            Self {
-                target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Sub),
-                operands: vec![rsp, Operand::Immediate(16)],
-                ..self.clone()
-            },
-            Self {
-                target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Movdqu),
-                operands: vec![
-                    Operand::Memory {
-                        base: iced_x86::Register::RSP,
-                        index: iced_x86::Register::None,
-                        scale: 0,
-                        displacement: 0,
-                    },
-                    reg,
-                ],
-                ..self.clone()
-            },
-        ];
-
-        let finish = vec![
-            Self {
-                target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Movdqu),
-                operands: vec![
-                    reg,
-                    Operand::Memory {
-                        base: iced_x86::Register::RSP,
-                        index: iced_x86::Register::None,
-                        scale: 0,
-                        displacement: 0,
-                    },
-                ],
-                ..self.clone()
-            },
-            Self {
-                target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Add),
-                operands: vec![rsp, Operand::Immediate(16)],
-                ..self.clone()
-            },
-        ];
-
-        start
-            .into_iter()
-            .chain(instr.into_iter())
-            .chain(finish.into_iter())
-            .collect_vec()
-    }
-
-    fn map3opto2op(&self, new_mnemonic: iced_x86::Mnemonic) -> Vec<Instruction> {
-        let tm = Mnemonic::Real(new_mnemonic);
-        if self.operands.len() == 2 {
-            vec![Self {
-                target_mnemonic: tm,
-                ..self.clone()
-            }]
-        } else if self.operands.len() == 3 {
-            if self.operands[0] == self.operands[1] {
-                vec![Self {
-                    target_mnemonic: tm,
-                    operands: vec![self.operands[0], self.operands[2]],
-                    ..self.clone()
-                }]
-            } else if self.operands[0] == self.operands[2] {
-                self.with_preserve_xmm_reg(
-                    self.operands[1],
-                    vec![
-                        Self {
-                            target_mnemonic: tm,
-                            operands: vec![self.operands[1], self.operands[2]],
-                            ..self.clone()
-                        },
-                        Self {
-                            target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Movups),
-                            operands: vec![self.operands[0], self.operands[1]],
-                            ..self.clone()
-                        },
-                    ],
-                )
-            } else {
-                vec![
-                    Self {
-                        target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Movups),
-                        operands: vec![self.operands[0], self.operands[1]],
-                        ..self.clone()
-                    },
-                    Self {
-                        target_mnemonic: tm,
-                        operands: vec![self.operands[0], self.operands[2]],
-                        ..self.clone()
-                    },
-                ]
-            }
-        } else {
-            println!("{:?}", self);
-            todo!();
-        }
-    }
-
     pub fn map(&self) -> Vec<Instruction> {
         if self.original_instr.encoding() == EncodingKind::VEX {
             match self.target_mnemonic {
-                super::Mnemonic::Real(mnemonic) => match mnemonic {
-                    iced_x86::Mnemonic::INVALID => panic!("Invalid instruction"),
-                    iced_x86::Mnemonic::Vmovups => {
-                        let ops = self.eliminate_ymm_by_splitting(true);
-
-                        ops.iter()
-                            .flat_map(|i| match i.target_mnemonic {
-                                Mnemonic::Real(_) => i.map3opto2op(iced_x86::Mnemonic::Movsd),
-                                Mnemonic::Regzero => vec![i.clone()],
-                            })
-                            .collect()
-                    }
-                    iced_x86::Mnemonic::Vmovsd => {
-                        let ops = self.eliminate_ymm_by_splitting(true);
-
-                        ops.iter()
-                            .flat_map(|i| match i.target_mnemonic {
-                                Mnemonic::Real(_) => i.map3opto2op(iced_x86::Mnemonic::Movsd),
-                                Mnemonic::Regzero => vec![i.clone()],
-                            })
-                            .collect()
-                    }
-                    iced_x86::Mnemonic::Vmovq => {
-                        let new_op = Self {
-                            target_mnemonic: Mnemonic::Real(iced_x86::Mnemonic::Movq),
-                            ..self.clone()
-                        };
-                        let no_ymm = new_op.eliminate_ymm_by_splitting(true);
-                        no_ymm
-                    }
-                    _ => {
-                        println!("map: \"{:?}\" not implemented", mnemonic);
-                        todo!();
+                super::Mnemonic::Real(mnemonic) => {
+                    match get_mapping(mnemonic) {
+                        Some(m) => {
+                            m.map(&self)
+                        },
+                        None => {
+                            println!("map: {:?} not implemented", mnemonic);
+                            todo!();
+                        },
                     }
                 },
                 super::Mnemonic::Regzero => {

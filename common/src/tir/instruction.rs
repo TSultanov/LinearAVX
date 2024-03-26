@@ -194,6 +194,12 @@ pub enum Mnemonic {
     Regzero,
 }
 
+impl From<iced_x86::Mnemonic> for Mnemonic {
+    fn from(value: iced_x86::Mnemonic) -> Self {
+        Mnemonic::Real(value)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Instruction {
     pub original_instr: iced_x86::Instruction,
