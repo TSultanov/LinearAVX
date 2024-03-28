@@ -2,7 +2,7 @@ use common::{
     compiler::{analyze_block, translate_block}, debugger::{process::Process, DebuggerCore}, decoder::{
         base::{BlockType, Decoder},
         process::ProcessDecoder,
-    }
+    }, tir::assembler::assemble
 };
 use std::{env, error::Error, mem::MaybeUninit};
 use windows::{
@@ -75,6 +75,7 @@ fn proc_created_handler(data: &Process) -> Result<(), Box<dyn Error>> {
             let fb = analyze_block(&block.value);
             let fb = translate_block(fb);
             fb.pretty_print();
+            assemble(fb)?;
             break;
         }
     }

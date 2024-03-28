@@ -202,7 +202,7 @@ impl From<iced_x86::Mnemonic> for Mnemonic {
 
 #[derive(Debug, Clone)]
 pub struct Instruction {
-    pub original_instr: iced_x86::Instruction,
+    pub original_instr: Option<iced_x86::Instruction>,
     pub original_ip: u64,
     pub original_next_ip: u64,
     pub target_mnemonic: Mnemonic,
@@ -217,7 +217,7 @@ impl Instruction {
             .collect();
 
         Self {
-            original_instr: instr,
+            original_instr: Some(instr),
             original_ip: instr.ip(),
             original_next_ip: instr.next_ip(),
             target_mnemonic: Mnemonic::Real(instr.mnemonic()),
@@ -296,28 +296,32 @@ impl Instruction {
             _ => {}
         }
 
-        let mut info_factory = InstructionInfoFactory::new();
-        let info = info_factory.info(&self.original_instr);
+        if let Some(original_instr) = &self.original_instr {
+            let mut info_factory = InstructionInfoFactory::new();
+            let info = info_factory.info(original_instr);
 
-        let input_regs = (0..self.original_instr.op_count())
-            .map(|i| {
-                let op_access = info.op_access(i);
-                let reg = self.original_instr.op_register(i);
-                (op_access, reg)
-            })
-            .filter(|(op_access, reg)| match op_access {
-                OpAccess::None => false,
-                OpAccess::Read => true,
-                OpAccess::CondRead => true,
-                OpAccess::Write => false,
-                OpAccess::CondWrite => true,
-                OpAccess::ReadWrite => true,
-                OpAccess::ReadCondWrite => true,
-                OpAccess::NoMemAccess => false,
-            })
-            .flat_map(|(_, reg)| Self::map_xmm_regs(&reg));
+            let input_regs = (0..original_instr.op_count())
+                .map(|i| {
+                    let op_access = info.op_access(i);
+                    let reg = original_instr.op_register(i);
+                    (op_access, reg)
+                })
+                .filter(|(op_access, reg)| match op_access {
+                    OpAccess::None => false,
+                    OpAccess::Read => true,
+                    OpAccess::CondRead => true,
+                    OpAccess::Write => false,
+                    OpAccess::CondWrite => true,
+                    OpAccess::ReadWrite => true,
+                    OpAccess::ReadCondWrite => true,
+                    OpAccess::NoMemAccess => false,
+                })
+                .flat_map(|(_, reg)| Self::map_xmm_regs(&reg));
 
-        input_regs.collect()
+            input_regs.collect()
+        } else {
+            vec![] // FIXME TODO return actual register usage from recompiled instr
+        }
     }
 
     pub fn get_output_regs(&self) -> Vec<(Register, RegisterValue)> {
@@ -415,35 +419,45 @@ impl Instruction {
             _ => {}
         }
 
-        let mut info_factory = InstructionInfoFactory::new();
-        let info = info_factory.info(&self.original_instr);
+        if let Some(original_instr) = &self.original_instr {
+            let mut info_factory = InstructionInfoFactory::new();
+            let info = info_factory.info(original_instr);
 
-        let input_regs = (0..self.original_instr.op_count())
-            .map(|i| {
-                let op_access = info.op_access(i);
-                let reg = self.original_instr.op_register(i);
-                (op_access, reg)
-            })
-            .filter(|(op_access, _)| match op_access {
-                OpAccess::None => false,
-                OpAccess::Read => false,
-                OpAccess::CondRead => false,
-                OpAccess::Write => true,
-                OpAccess::CondWrite => true,
-                OpAccess::ReadWrite => true,
-                OpAccess::ReadCondWrite => true,
-                OpAccess::NoMemAccess => false,
-            })
-            .flat_map(|(_, reg)| {
-                Self::map_xmm_regs(&reg).into_iter().flat_map(move |r| {
-                    if reg.is_xmm() && self.original_instr.encoding() == EncodingKind::VEX {
-                        vec![(r, RegisterValue::Unknown), (VirtualRegister::high_for_xmm(&reg).into(), RegisterValue::Zero)]
-                    } else {
-                        vec![(r, RegisterValue::Unknown)]
-                    }
+            let input_regs = (0..original_instr.op_count())
+                .map(|i| {
+                    let op_access = info.op_access(i);
+                    let reg = original_instr.op_register(i);
+                    (op_access, reg)
                 })
-            });
+                .filter(|(op_access, _)| match op_access {
+                    OpAccess::None => false,
+                    OpAccess::Read => false,
+                    OpAccess::CondRead => false,
+                    OpAccess::Write => true,
+                    OpAccess::CondWrite => true,
+                    OpAccess::ReadWrite => true,
+                    OpAccess::ReadCondWrite => true,
+                    OpAccess::NoMemAccess => false,
+                })
+                .flat_map(|(_, reg)| {
+                    Self::map_xmm_regs(&reg).into_iter().flat_map(move |r| {
+                        if reg.is_xmm() && original_instr.encoding() == EncodingKind::VEX {
+                            vec![
+                                (r, RegisterValue::Unknown),
+                                (
+                                    VirtualRegister::high_for_xmm(&reg).into(),
+                                    RegisterValue::Zero,
+                                ),
+                            ]
+                        } else {
+                            vec![(r, RegisterValue::Unknown)]
+                        }
+                    })
+                });
 
-        input_regs.collect()
+            input_regs.collect()
+        } else {
+            vec![] // FIXME TODO return actual register usage for recompiled instructions
+        }
     }
 }

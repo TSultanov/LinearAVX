@@ -62,9 +62,13 @@ impl ControlBlock {
         let input_xmm_registers = Self::construct_input_xmm_registers(&reguse);
         let output_xmm_registers = Self::construct_output_xmm_registers(&reguse);
         Self {
-            to_recompile: instructions
-                .iter()
-                .any(|i| i.original_instr.encoding() == EncodingKind::VEX),
+            to_recompile: instructions.iter().any(|i| {
+                if let Some(original_instr) = &i.original_instr {
+                    original_instr.encoding() == EncodingKind::VEX
+                } else {
+                    false
+                }
+            }),
             instructions: instructions.into_iter().zip(reguse).collect(),
             input_xmm_registers: input_xmm_registers,
             output_xmm_registers: output_xmm_registers,
@@ -316,7 +320,6 @@ fn translate_control_block(cb: &ControlBlock) -> ControlBlock {
     let instructions_no_ymm = cb
         .instructions
         .iter()
-        // .flat_map(|(i, _)| i.eliminate_ymm_by_splitting(true))
         .flat_map(|(i, _)| i.map())
         // .map(|(i, _)| i.clone())
         .collect();

@@ -77,12 +77,14 @@ fn map3opto2op(i: &Instruction, new_mnemonic: iced_x86::Mnemonic) -> Vec<Instruc
     if i.operands.len() == 2 {
         vec![Instruction {
             target_mnemonic: tm,
+            original_instr: None,
             ..i.clone()
         }]
     } else if i.operands.len() == 3 {
         if i.operands[0] == i.operands[1] {
             vec![Instruction {
                 target_mnemonic: tm,
+                original_instr: None,
                 operands: vec![i.operands[0], i.operands[2]],
                 ..i.clone()
             }]
@@ -93,11 +95,13 @@ fn map3opto2op(i: &Instruction, new_mnemonic: iced_x86::Mnemonic) -> Vec<Instruc
                 vec![
                     Instruction {
                         target_mnemonic: tm,
+                        original_instr: None,
                         operands: vec![i.operands[1], i.operands[2]],
                         ..i.clone()
                     },
                     Instruction {
                         target_mnemonic: instruction::Mnemonic::Real(iced_x86::Mnemonic::Movups),
+                        original_instr: None,
                         operands: vec![i.operands[0], i.operands[1]],
                         ..i.clone()
                     },
@@ -107,11 +111,13 @@ fn map3opto2op(i: &Instruction, new_mnemonic: iced_x86::Mnemonic) -> Vec<Instruc
             vec![
                 Instruction {
                     target_mnemonic: instruction::Mnemonic::Real(iced_x86::Mnemonic::Movups),
+                    original_instr: None,
                     operands: vec![i.operands[0], i.operands[1]],
                     ..i.clone()
                 },
                 Instruction {
                     target_mnemonic: tm,
+                    original_instr: None,
                     operands: vec![i.operands[0], i.operands[2]],
                     ..i.clone()
                 },
@@ -152,6 +158,7 @@ const MAPPINGS_VEC: &[Mapping] = &[
             ops.iter()
                 .map(|i| Instruction {
                     target_mnemonic: iced_x86::Mnemonic::Movups.into(),
+                    original_instr: None,
                     ..i.clone()
                 })
                 .collect()
@@ -175,6 +182,7 @@ const MAPPINGS_VEC: &[Mapping] = &[
         map: &|i| {
             let new_op = Instruction {
                 target_mnemonic: iced_x86::Mnemonic::Movq.into(),
+                original_instr: None,
                 ..i.clone()
             };
             let no_ymm = new_op.eliminate_ymm_by_splitting(true);

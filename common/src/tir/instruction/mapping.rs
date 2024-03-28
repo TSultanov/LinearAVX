@@ -9,7 +9,7 @@ fn add_zeroupper(vec: Vec<Instruction>, op: Operand) -> Vec<Instruction> {
         result.push(i)
     }
     result.push(Instruction {
-        original_instr: result.last().unwrap().original_instr,
+        original_instr: None,//result.last().unwrap().original_instr,
         original_ip: result.last().unwrap().original_ip,
         original_next_ip: result.last().unwrap().original_next_ip,
         operands: vec![op],
@@ -21,26 +21,26 @@ fn add_zeroupper(vec: Vec<Instruction>, op: Operand) -> Vec<Instruction> {
 
 impl Instruction {
     pub fn map(&self) -> Vec<Instruction> {
-        if self.original_instr.encoding() == EncodingKind::VEX {
-            match self.target_mnemonic {
-                super::Mnemonic::Real(mnemonic) => {
-                    match get_mapping(mnemonic) {
-                        Some(m) => {
-                            m.map(&self)
-                        },
+        if let Some(original_instr) = self.original_instr {
+            if original_instr.encoding() == EncodingKind::VEX {
+                match self.target_mnemonic {
+                    super::Mnemonic::Real(mnemonic) => match get_mapping(mnemonic) {
+                        Some(m) => m.map(&self),
                         None => {
                             println!("map: {:?} not implemented", mnemonic);
                             todo!();
-                        },
+                        }
+                    },
+                    super::Mnemonic::Regzero => {
+                        println!("Regzero! TODO FIXME");
+                        todo!()
                     }
-                },
-                super::Mnemonic::Regzero => {
-                    println!("Regzero! TODO FIXME");
-                    todo!()
                 }
+            } else {
+                vec![self.clone()]
             }
         } else {
-            vec![self.clone()]
+            todo!()
         }
     }
 
