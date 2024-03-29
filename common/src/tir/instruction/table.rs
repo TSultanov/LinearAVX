@@ -173,6 +173,8 @@ const MAPPINGS_VEC: &[Mapping] = &[
                 .flat_map(|i| match i.target_mnemonic {
                     instruction::Mnemonic::Real(_) => map3opto2op(i, iced_x86::Mnemonic::Movsd),
                     instruction::Mnemonic::Regzero => vec![i.clone()],
+                    instruction::Mnemonic::SwapInHighYmm => todo!(),
+                    instruction::Mnemonic::SwapOutHighYmm => todo!(),
                 })
                 .collect()
         },

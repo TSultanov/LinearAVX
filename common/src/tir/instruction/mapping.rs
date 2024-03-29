@@ -9,7 +9,7 @@ fn add_zeroupper(vec: Vec<Instruction>, op: Operand) -> Vec<Instruction> {
         result.push(i)
     }
     result.push(Instruction {
-        original_instr: None,//result.last().unwrap().original_instr,
+        original_instr: None, //result.last().unwrap().original_instr,
         original_ip: result.last().unwrap().original_ip,
         original_next_ip: result.last().unwrap().original_next_ip,
         operands: vec![op],
@@ -20,6 +20,38 @@ fn add_zeroupper(vec: Vec<Instruction>, op: Operand) -> Vec<Instruction> {
 }
 
 impl Instruction {
+    pub fn detect_high_loads(&self) -> Vec<Instruction> {
+        let input_high_xmm = self.get_input_regs().into_iter().filter(|r| r.is_xmm_hi());
+        let output_high_xmm = self
+            .get_output_regs()
+            .into_iter()
+            .filter(|(r, _)| r.is_xmm_hi())
+            .map(|(r, _)| r);
+        let high_xmms = input_high_xmm.chain(output_high_xmm).unique();
+
+        let operands: Vec<_> = high_xmms.map(|r| {
+            Operand::Register(r)
+        }).collect();
+
+        let loads = operands.iter().map(|o| {
+            Instruction {
+                target_mnemonic: Mnemonic::SwapInHighYmm,
+                operands: vec![*o],
+                ..self.clone()
+            }
+        });
+        let instr = std::iter::once(self.clone());
+        let stores = operands.iter().map(|o| {
+            Instruction {
+                target_mnemonic: Mnemonic::SwapOutHighYmm,
+                operands: vec![*o],
+                ..self.clone()
+            }
+        });
+
+        loads.chain(instr).chain(stores).collect_vec()
+    }
+
     pub fn map(&self) -> Vec<Instruction> {
         if let Some(original_instr) = self.original_instr {
             if original_instr.encoding() == EncodingKind::VEX {
@@ -33,6 +65,14 @@ impl Instruction {
                     },
                     super::Mnemonic::Regzero => {
                         println!("Regzero! TODO FIXME");
+                        todo!()
+                    }
+                    Mnemonic::SwapInHighYmm => {
+                        println!("SwapInHighYmm! TODO FIXME");
+                        todo!()
+                    }
+                    Mnemonic::SwapOutHighYmm => {
+                        println!("SwapOutHighYmm! TODO FIXME");
                         todo!()
                     }
                 }

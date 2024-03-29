@@ -134,10 +134,8 @@ impl DebuggerCore {
         let process = self.active_processes.get_mut(&pid).unwrap();
         let thread = process.get_thread(tid).unwrap();
         if let Some(context) = self.tls_allocation_awaiting.get(&tid) {
-            // thread.suspend();
             let old_context = thread.get_context().unwrap();
             let _ = thread.set_context(context);
-            // process.resume();
 
             let tls_index = old_context.ctx.Rax;
             let canary = old_context.ctx.Rbx;
@@ -146,8 +144,10 @@ impl DebuggerCore {
                 panic!("TLS allcoation failed: mismatched canary");
             }
             println!("TLS allocated at index {}", tls_index);
+            let process = self.active_processes.get_mut(&pid).unwrap();
+            process.set_tls_offset(tls_index);
 
-            (self.process_created_handler)(self.active_processes.get(&pid).unwrap())
+            (self.process_created_handler)(process)
                 .expect("Failed to execute callback");
 
             DBG_CONTINUE

@@ -76,6 +76,7 @@ pub struct Process {
     pub base_address: u64,
     pub entry_point: u64,
     pub machine_info: PROCESS_MACHINE_INFORMATION,
+    pub tls_offset: Option<u64>,
     h_process: HANDLE,
     threads: HashMap<u32, Thread>,
     breakpoints: HashMap<u64, u8>,
@@ -113,6 +114,7 @@ impl Process {
             entry_point: process_info.lpStartAddress.unwrap() as u64,
             h_process: process_info.hProcess,
             threads: threads,
+            tls_offset: None,
             machine_info: mi,
             breakpoints: HashMap::new(),
         }
@@ -221,6 +223,10 @@ impl Process {
         } else {
             None
         }
+    }
+
+    pub fn set_tls_offset(&mut self, tls_offset: u64) {
+        self.tls_offset = Some(tls_offset);
     }
 }
 

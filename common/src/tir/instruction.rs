@@ -192,6 +192,8 @@ impl Operand {
 pub enum Mnemonic {
     Real(iced_x86::Mnemonic),
     Regzero,
+    SwapInHighYmm,
+    SwapOutHighYmm,
 }
 
 impl From<iced_x86::Mnemonic> for Mnemonic {
@@ -274,22 +276,22 @@ impl Instruction {
                     }
                     // Assume that all function calls follow Vectorcall convention
                     // https://learn.microsoft.com/en-us/cpp/cpp/vectorcall?view=msvc-170
-                    iced_x86::Mnemonic::Call => {
-                        return vec![
-                            Register::Native(iced_x86::Register::XMM0),
-                            Register::Virtual(VirtualRegister::XMM0H),
-                            Register::Native(iced_x86::Register::XMM1),
-                            Register::Virtual(VirtualRegister::XMM1H),
-                            Register::Native(iced_x86::Register::XMM2),
-                            Register::Virtual(VirtualRegister::XMM2H),
-                            Register::Native(iced_x86::Register::XMM3),
-                            Register::Virtual(VirtualRegister::XMM3H),
-                            Register::Native(iced_x86::Register::XMM4),
-                            Register::Virtual(VirtualRegister::XMM4H),
-                            Register::Native(iced_x86::Register::XMM5),
-                            Register::Virtual(VirtualRegister::XMM5H),
-                        ];
-                    }
+                    // iced_x86::Mnemonic::Call => {
+                    //     return vec![
+                    //         Register::Native(iced_x86::Register::XMM0),
+                    //         Register::Virtual(VirtualRegister::XMM0H),
+                    //         Register::Native(iced_x86::Register::XMM1),
+                    //         Register::Virtual(VirtualRegister::XMM1H),
+                    //         Register::Native(iced_x86::Register::XMM2),
+                    //         Register::Virtual(VirtualRegister::XMM2H),
+                    //         Register::Native(iced_x86::Register::XMM3),
+                    //         Register::Virtual(VirtualRegister::XMM3H),
+                    //         Register::Native(iced_x86::Register::XMM4),
+                    //         Register::Virtual(VirtualRegister::XMM4H),
+                    //         Register::Native(iced_x86::Register::XMM5),
+                    //         Register::Virtual(VirtualRegister::XMM5H),
+                    //     ];
+                    // }
                     _ => {}
                 }
             }
@@ -320,7 +322,28 @@ impl Instruction {
 
             input_regs.collect()
         } else {
-            vec![] // FIXME TODO return actual register usage from recompiled instr
+            self.operands
+                .iter()
+                .filter_map(|o| match o {
+                    Operand::Register(reg) => match reg {
+                        Register::Native(nreg) => {
+                            if nreg.is_xmm() || nreg.is_ymm() {
+                                Some(*reg)
+                            } else {
+                                None
+                            }
+                        }
+                        Register::Virtual(_) => {
+                            if reg.is_xmm_hi() {
+                                Some(*reg)
+                            } else {
+                                None
+                            }
+                        }
+                    },
+                    _ => None,
+                })
+                .collect()
         }
     }
 
@@ -377,42 +400,42 @@ impl Instruction {
                     // Assume that all function calls follow Vectorcall convention
                     // and potentially return HVA
                     // https://learn.microsoft.com/en-us/cpp/cpp/vectorcall?view=msvc-170
-                    iced_x86::Mnemonic::Call => {
-                        return vec![
-                            (
-                                Register::Native(iced_x86::Register::XMM0),
-                                RegisterValue::Unknown,
-                            ),
-                            (
-                                Register::Virtual(VirtualRegister::XMM0H),
-                                RegisterValue::Unknown,
-                            ),
-                            (
-                                Register::Native(iced_x86::Register::XMM1),
-                                RegisterValue::Unknown,
-                            ),
-                            (
-                                Register::Virtual(VirtualRegister::XMM1H),
-                                RegisterValue::Unknown,
-                            ),
-                            (
-                                Register::Native(iced_x86::Register::XMM2),
-                                RegisterValue::Unknown,
-                            ),
-                            (
-                                Register::Virtual(VirtualRegister::XMM2H),
-                                RegisterValue::Unknown,
-                            ),
-                            (
-                                Register::Native(iced_x86::Register::XMM3),
-                                RegisterValue::Unknown,
-                            ),
-                            (
-                                Register::Virtual(VirtualRegister::XMM3H),
-                                RegisterValue::Unknown,
-                            ),
-                        ];
-                    }
+                    // iced_x86::Mnemonic::Call => {
+                    //     return vec![
+                    //         (
+                    //             Register::Native(iced_x86::Register::XMM0),
+                    //             RegisterValue::Unknown,
+                    //         ),
+                    //         (
+                    //             Register::Virtual(VirtualRegister::XMM0H),
+                    //             RegisterValue::Unknown,
+                    //         ),
+                    //         (
+                    //             Register::Native(iced_x86::Register::XMM1),
+                    //             RegisterValue::Unknown,
+                    //         ),
+                    //         (
+                    //             Register::Virtual(VirtualRegister::XMM1H),
+                    //             RegisterValue::Unknown,
+                    //         ),
+                    //         (
+                    //             Register::Native(iced_x86::Register::XMM2),
+                    //             RegisterValue::Unknown,
+                    //         ),
+                    //         (
+                    //             Register::Virtual(VirtualRegister::XMM2H),
+                    //             RegisterValue::Unknown,
+                    //         ),
+                    //         (
+                    //             Register::Native(iced_x86::Register::XMM3),
+                    //             RegisterValue::Unknown,
+                    //         ),
+                    //         (
+                    //             Register::Virtual(VirtualRegister::XMM3H),
+                    //             RegisterValue::Unknown,
+                    //         ),
+                    //     ];
+                    // }
                     _ => {}
                 }
             }
@@ -457,7 +480,28 @@ impl Instruction {
 
             input_regs.collect()
         } else {
-            vec![] // FIXME TODO return actual register usage for recompiled instructions
+            self.operands
+                .iter()
+                .filter_map(|o| match o {
+                    Operand::Register(reg) => match reg {
+                        Register::Native(nreg) => {
+                            if nreg.is_xmm() || nreg.is_ymm() {
+                                Some((*reg, RegisterValue::Unknown))
+                            } else {
+                                None
+                            }
+                        }
+                        Register::Virtual(_) => {
+                            if reg.is_xmm_hi() {
+                                Some((*reg,  RegisterValue::Unknown))
+                            } else {
+                                None
+                            }
+                        }
+                    },
+                    _ => None,
+                })
+                .collect()
         }
     }
 }

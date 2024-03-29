@@ -39,6 +39,8 @@ pub fn assemble_instruction(
             None => assemble_translated(a, m, i),
         },
         super::Mnemonic::Regzero => assemble_regzero(a),
+        super::Mnemonic::SwapInHighYmm => todo!(),
+        super::Mnemonic::SwapOutHighYmm => todo!(),
     }
 }
 

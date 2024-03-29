@@ -321,6 +321,7 @@ fn translate_control_block(cb: &ControlBlock) -> ControlBlock {
         .instructions
         .iter()
         .flat_map(|(i, _)| i.map())
+        .flat_map(|i| i.detect_high_loads())
         // .map(|(i, _)| i.clone())
         .collect();
     ControlBlock::new(instructions_no_ymm)
