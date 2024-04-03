@@ -1,8 +1,5 @@
-use std::collections::HashSet;
-
-use enum_iterator::{all, Sequence};
+use enum_iterator::Sequence;
 use iced_x86::{EncodingKind, InstructionInfoFactory, OpAccess};
-use im::hashset::Iter;
 pub mod mapping;
 mod table;
 
@@ -93,7 +90,7 @@ pub enum Register {
 impl Register {
     pub fn is_xmm_hi(&self) -> bool {
         match self {
-            Register::Native(reg) => false,
+            Register::Native(_) => false,
             Register::Virtual(reg) => match reg {
                 VirtualRegister::XMM0H
                 | VirtualRegister::XMM1H
@@ -308,7 +305,7 @@ impl Instruction {
                     let reg = original_instr.op_register(i);
                     (op_access, reg)
                 })
-                .filter(|(op_access, reg)| match op_access {
+                .filter(|(op_access, _)| match op_access {
                     OpAccess::None => false,
                     OpAccess::Read => true,
                     OpAccess::CondRead => true,

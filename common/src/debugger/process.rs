@@ -1,34 +1,37 @@
+mod allocator;
+mod memory_info;
+
 use std::{
-    arch::asm,
+    cell::RefCell,
     collections::HashMap,
     error::Error,
     ffi::c_void,
     mem::{size_of, MaybeUninit},
+    ops::Range,
     ptr::addr_of_mut,
 };
 
-use enum_iterator::cardinality;
 use iced_x86::code_asm::{ebx, rax, CodeAssembler};
 use windows::{
-    core::{HSTRING, PCSTR, PWSTR},
+    core::{HSTRING, PCSTR},
     Win32::{
-        Foundation::{CACHE_S_FORMATETC_NOTSUPPORTED, HANDLE},
+        Foundation::HANDLE,
         System::{
             Diagnostics::Debug::{
                 FlushInstructionCache, GetThreadContext, ReadProcessMemory, SetThreadContext,
                 WriteProcessMemory, CONTEXT, CONTEXT_ALL_AMD64, CREATE_PROCESS_DEBUG_INFO,
                 CREATE_THREAD_DEBUG_INFO,
             },
-            LibraryLoader::{GetModuleHandleA, GetModuleHandleW, GetProcAddress, LoadLibraryW},
-            Memory::{VirtualAllocEx, MEM_COMMIT, MEM_RESERVE, PAGE_EXECUTE_READWRITE},
+            LibraryLoader::{GetModuleHandleW, GetProcAddress},
             Threading::{
                 GetProcessId, GetProcessInformation, GetThreadId, ProcessMachineTypeInfo,
-                ResumeThread, SuspendThread, TlsAlloc, PROCESS_INFORMATION_CLASS,
-                PROCESS_MACHINE_INFORMATION,
+                ResumeThread, SuspendThread, PROCESS_MACHINE_INFORMATION,
             },
         },
     },
 };
+
+use self::{allocator::Allocator, memory_info::MemoryInfo};
 
 pub struct Thread {
     pub tid: u32,
@@ -80,6 +83,8 @@ pub struct Process {
     h_process: HANDLE,
     threads: HashMap<u32, Thread>,
     breakpoints: HashMap<u64, u8>,
+    allocator: RefCell<Allocator>,
+    pub memory_info: MemoryInfo,
 }
 
 impl Process {
@@ -108,6 +113,9 @@ impl Process {
             mi.assume_init()
         };
 
+        let max_code_alloc_size = 1024*1024*1024;
+        let memory_info = MemoryInfo::new(process_info.hProcess);
+
         Process {
             pid: pid,
             base_address: process_info.lpBaseOfImage as u64,
@@ -117,6 +125,12 @@ impl Process {
             tls_offset: None,
             machine_info: mi,
             breakpoints: HashMap::new(),
+            allocator: RefCell::new(Allocator::new(
+                process_info.hProcess,
+                memory_info.get_nearest_free(process_info.lpBaseOfImage as u64, max_code_alloc_size),
+                max_code_alloc_size
+            )),
+            memory_info: memory_info,
         }
     }
 
@@ -141,18 +155,6 @@ impl Process {
             self.write_memory(addr, &vec![*real_byte])?;
         }
         Ok(())
-    }
-
-    pub fn alloc_memory_rwx(&self, size: usize) -> u64 {
-        unsafe {
-            VirtualAllocEx(
-                self.h_process,
-                None,
-                size,
-                MEM_COMMIT | MEM_RESERVE,
-                PAGE_EXECUTE_READWRITE,
-            ) as u64
-        }
     }
 
     pub fn read_memory(&self, addr: u64, size: usize) -> Result<Vec<u8>, Box<dyn Error>> {
@@ -206,16 +208,14 @@ impl Process {
             // Save thread context
             let mut context = thread.get_context().unwrap();
             context.ctx.Rip -= 1;
-            println!("RIP = {:#x}", context.ctx.Rip);
 
             let mut new_context = context.clone();
 
-            let exec_addr = self.alloc_memory_rwx(20);
+            let exec_addr = self.allocator.borrow_mut().allocate(20).unwrap();
             let shellcode = jit_tls_alloc(exec_addr).unwrap();
             self.write_memory(exec_addr, &shellcode).unwrap();
 
             new_context.ctx.Rip = exec_addr as u64;
-            println!("new RIP = {:#x}", new_context.ctx.Rip);
 
             thread.set_context(&new_context).unwrap();
 
@@ -228,6 +228,39 @@ impl Process {
     pub fn set_tls_offset(&mut self, tls_offset: u64) {
         self.tls_offset = Some(tls_offset);
     }
+
+    pub fn rewrite_code(
+        &self,
+        code_range: Range<u64>,
+        asm: &mut CodeAssembler,
+    ) -> Result<(), Box<dyn Error>> {
+        // 1. Alloc initial amount of memory for new code
+        let size_guess = (code_range.end - code_range.start) as usize;
+        let base = self.allocator.borrow_mut().allocate(size_guess)?;
+
+        // 2. Assemble new code with the new allocation start as a base address
+        let assembled_block = asm.assemble(base)?;
+
+        // 3. Bump allocated amount if necessary
+        if assembled_block.len() > size_guess {
+            self.allocator
+                .borrow_mut()
+                .allocation_increase(base, assembled_block.len())?
+        }
+
+        // 4. Copy assembled code
+        self.write_memory(base, &assembled_block)?;
+
+        // 5. Set up trampoline
+        println!(
+            "For function at {:#x} (len {}) written recompiled version at {:#x} (len {})",
+            code_range.start,
+            size_guess,
+            base,
+            assembled_block.len()
+        );
+        Ok(())
+    }
 }
 
 fn jit_tls_alloc(base_addr: u64) -> Result<Vec<u8>, Box<dyn Error>> {
@@ -235,7 +268,8 @@ fn jit_tls_alloc(base_addr: u64) -> Result<Vec<u8>, Box<dyn Error>> {
     let module_name = HSTRING::from("kernel32.dll");
     let module = unsafe { GetModuleHandleW(&module_name)? };
     let proc_name = "TlsAlloc\0";
-    let proc_address = unsafe { GetProcAddress(module, PCSTR::from_raw(proc_name.as_ptr())).unwrap() } as u64;
+    let proc_address =
+        unsafe { GetProcAddress(module, PCSTR::from_raw(proc_name.as_ptr())).unwrap() } as u64;
 
     let mut a = CodeAssembler::new(64)?;
     a.mov(rax, proc_address)?; // 10B
@@ -244,7 +278,7 @@ fn jit_tls_alloc(base_addr: u64) -> Result<Vec<u8>, Box<dyn Error>> {
     a.int3()?; // 1B
     a.int3()?; // 1B
     a.int3()?; // 1B
-    // 20B total
+               // 20B total
 
     Ok(a.assemble(base_addr)?)
 }

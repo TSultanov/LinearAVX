@@ -1,6 +1,6 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 
-use iced_x86::{code_asm::CodeAssembler, EncodingKind};
+use iced_x86::EncodingKind;
 use itertools::Itertools;
 
 use crate::{
@@ -26,7 +26,7 @@ pub struct ControlBlock {
 pub struct FunctionBlock {
     pub control_blocks: Vec<ControlBlock>,
     pub edges: HashMap<usize, Vec<usize>>,
-    range: std::ops::Range<u64>,
+    pub range: std::ops::Range<u64>,
 }
 
 impl FunctionBlock {

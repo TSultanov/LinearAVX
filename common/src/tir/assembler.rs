@@ -1,20 +1,20 @@
 use std::error::Error;
 
 use iced_x86::{
-    code_asm::{oword_ptr, xmmword_ptr, AsmRegister64, CodeAssembler},
+    code_asm::{CodeAssembler},
     IcedError, Instruction, MemoryOperand,
 };
 
 use crate::compiler::{ControlBlock, FunctionBlock};
 
-pub fn assemble(fb: FunctionBlock) -> Result<(), Box<dyn Error>> {
+pub fn assemble(fb: &FunctionBlock) -> Result<CodeAssembler, Box<dyn Error>> {
     let mut a = CodeAssembler::new(64)?;
 
-    for cb in fb.control_blocks {
-        assemble_codeblock(&mut a, &cb)?;
+    for cb in &fb.control_blocks {
+        assemble_codeblock(&mut a, cb)?;
     }
 
-    Ok(())
+    Ok(a)
 }
 
 pub fn assemble_codeblock(a: &mut CodeAssembler, cb: &ControlBlock) -> Result<(), IcedError> {
@@ -33,7 +33,6 @@ pub fn assemble_instruction(
         super::Mnemonic::Real(m) => match i.original_instr {
             Some(original_instr) => {
                 let mut instr = original_instr.clone();
-                instr.set_ip(0);
                 a.add_instruction(instr)
             }
             None => assemble_translated(a, m, i),

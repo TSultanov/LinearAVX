@@ -10,7 +10,7 @@ use windows::{
         System::{
             Diagnostics::Debug::*,
             SystemInformation::IMAGE_FILE_MACHINE_AMD64,
-            Threading::{GetProcessId, OpenProcess, INFINITE, PROCESS_ALL_ACCESS},
+            Threading::{OpenProcess, INFINITE, PROCESS_ALL_ACCESS},
         },
     },
 };
@@ -65,7 +65,7 @@ impl DebuggerCore {
     fn handle_create_thread(
         &mut self,
         pid: u32,
-        tid: u32,
+        _tid: u32,
         create_thread_info: CREATE_THREAD_DEBUG_INFO,
     ) {
         let process = self
@@ -85,8 +85,8 @@ impl DebuggerCore {
 
     fn handle_create_process(
         &mut self,
-        pid: u32,
-        tid: u32,
+        _pid: u32,
+        _tid: u32,
         create_process_info: CREATE_PROCESS_DEBUG_INFO,
     ) -> bool {
         let image_name = if create_process_info.hFile.is_invalid() {

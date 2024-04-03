@@ -1,8 +1,7 @@
-use std::{cell::OnceCell, collections::HashMap, iter::Map, sync::Once};
+use std::{cell::OnceCell, collections::HashMap};
 
 use crate::tir::instruction;
 use iced_x86::Mnemonic;
-use im::hashset;
 
 use super::{Instruction, Operand, Register};
 
