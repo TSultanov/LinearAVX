@@ -71,15 +71,16 @@ fn proc_created_handler(data: &Process) -> Result<(), Box<dyn Error>> {
     let blocks = decoder.decode_all_from(data.entry_point)?;
 
     for block in blocks {
-        if block.value.needs_recompiling() {
-            let fb = analyze_block(&block.value);
-            // let fb = translate_block(fb);
-            // fb.pretty_print();
-            let mut asm = assemble(&fb)?;
-            data.rewrite_code(fb.range, &mut asm)?;
-            break;
-        }
+        // if block.value.needs_recompiling() {
+        let fb = analyze_block(&block.value);
+        // let fb = translate_block(fb);
+        // fb.pretty_print();
+        let mut asm = assemble(&fb)?;
+        data.rewrite_code(fb.range, &mut asm)?;
+        // break;
+        // }
     }
 
-    Err("Terminate".into())
+    // Err("Terminate".into())
+    Ok(())
 }

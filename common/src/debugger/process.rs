@@ -113,7 +113,7 @@ impl Process {
             mi.assume_init()
         };
 
-        let max_code_alloc_size = 1024*1024*1024;
+        let max_code_alloc_size = 1024 * 1024 * 1024;
         let memory_info = MemoryInfo::new(process_info.hProcess);
 
         Process {
@@ -127,8 +127,9 @@ impl Process {
             breakpoints: HashMap::new(),
             allocator: RefCell::new(Allocator::new(
                 process_info.hProcess,
-                memory_info.get_nearest_free(process_info.lpBaseOfImage as u64, max_code_alloc_size),
-                max_code_alloc_size
+                memory_info
+                    .get_nearest_free(process_info.lpBaseOfImage as u64, max_code_alloc_size),
+                max_code_alloc_size,
             )),
             memory_info: memory_info,
         }
@@ -236,6 +237,10 @@ impl Process {
     ) -> Result<(), Box<dyn Error>> {
         // 1. Alloc initial amount of memory for new code
         let size_guess = (code_range.end - code_range.start) as usize;
+        println!(
+            "For function at {:#x} (len {}):",
+            code_range.start, size_guess,
+        );
         let base = self.allocator.borrow_mut().allocate(size_guess)?;
 
         // 2. Assemble new code with the new allocation start as a base address
@@ -250,15 +255,27 @@ impl Process {
 
         // 4. Copy assembled code
         self.write_memory(base, &assembled_block)?;
-
-        // 5. Set up trampoline
         println!(
-            "For function at {:#x} (len {}) written recompiled version at {:#x} (len {})",
-            code_range.start,
-            size_guess,
+            "  written recompiled version at {:#x} (len {})",
             base,
             assembled_block.len()
         );
+
+        // 5. Set up trampoline
+        let mut trampoline_asm = CodeAssembler::new(64)?;
+        trampoline_asm.jmp(base)?;
+        trampoline_asm.int3()?;
+        trampoline_asm.int3()?;
+
+        let trampoline = trampoline_asm.assemble(code_range.start)?;
+        self.write_memory(code_range.start, &trampoline)?;
+
+        println!(
+            "  written trampoline at {:#x} (len {})",
+            code_range.start,
+            trampoline.len()
+        );
+
         Ok(())
     }
 }
