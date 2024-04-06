@@ -44,7 +44,6 @@ pub struct Process {
     threads: HashMap<u32, Thread>,
     breakpoints: HashMap<u64, u8>,
     allocator: RefCell<Allocator>,
-    pub memory_info: MemoryInfo,
 }
 
 impl Process {
@@ -87,11 +86,10 @@ impl Process {
             breakpoints: HashMap::new(),
             allocator: RefCell::new(Allocator::new(
                 process_info.hProcess,
-                memory_info
-                    .get_nearest_free(process_info.lpBaseOfImage as u64, max_code_alloc_size),
+                memory_info,
+                process_info.lpBaseOfImage as u64,
                 max_code_alloc_size,
             )),
-            memory_info,
         }
     }
 

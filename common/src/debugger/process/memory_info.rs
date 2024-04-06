@@ -56,19 +56,21 @@ impl MemoryInfo {
         result
     }
 
-    pub fn get_nearest_free(&self, starting_at: u64, size: usize) -> u64 {
+    pub fn get_nearest_free(&self, starting_at: u64, size: usize) -> Vec<u64> {
         let map = self.get_memory_map_starting_at(0);
         let suitable_maps = map
             .iter()
             .filter(|m| m.RegionSize >= size && m.State == MEM_FREE)
-            .sorted_by_key(|a| (a.BaseAddress as u64).abs_diff(starting_at))
-            .collect_vec();
-        let suitable = suitable_maps.get(1).unwrap();
-        let base_addr = if (suitable.BaseAddress as u64) < starting_at {
-            (suitable.BaseAddress as usize + suitable.RegionSize - size) as u64
-        } else {
-            suitable.BaseAddress as u64
-        };
-        base_addr
+            .sorted_by_key(|a| (a.BaseAddress as u64).abs_diff(starting_at));
+
+        let suitable_base_addrs = suitable_maps.map(move |m| {
+            if (m.BaseAddress as u64) < starting_at {
+                (m.BaseAddress as usize + m.RegionSize - size) as u64
+            } else {
+                m.BaseAddress as u64
+            }
+        });
+
+        suitable_base_addrs.collect()
     }
 }
