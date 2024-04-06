@@ -8,7 +8,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let binary_data = fs::read(config.input_file_path)?;
     let file = object::File::parse(&*binary_data)?;
-    
+
     let format = file.format();
     println!("Format: {:?}", format);
 
@@ -29,12 +29,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let blocks = text_decoder.decode_all_from(entry)?;
     for block in blocks {
-        if block.value.needs_recompiling() {
-            // block.value.pretty_print();
-            let fb = analyze_block(&block.value);
-            fb.pretty_print();
-            break;
-        }
+        // if block.value.needs_recompiling() {
+        block.value.pretty_print();
+        let fb = analyze_block(&block.value);
+        fb.pretty_print();
+        // }
     }
 
     Ok(())

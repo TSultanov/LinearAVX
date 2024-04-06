@@ -25,7 +25,7 @@ pub struct ControlBlock {
 #[derive(Debug)]
 pub struct FunctionBlock {
     pub control_blocks: Vec<ControlBlock>,
-    pub edges: HashMap<usize, Vec<usize>>,
+    // pub edges: HashMap<usize, Vec<usize>>,
     pub range: std::ops::Range<u64>,
 }
 
@@ -125,6 +125,8 @@ fn create_control_blocks(block: &DecodedBlock) -> Vec<(ControlBlock, Vec<u64>)> 
     let mut branch_targets = HashSet::new();
     let mut branches = HashMap::new();
 
+    branch_points.insert(block.instructions.last().unwrap().ip());
+
     for i in &block.instructions {
         match i.flow_control() {
             iced_x86::FlowControl::Next => {}
@@ -166,17 +168,23 @@ fn create_control_blocks(block: &DecodedBlock) -> Vec<(ControlBlock, Vec<u64>)> 
     let mut result = Vec::new();
     let mut current_block = Vec::new();
 
-    for i in 1..block.instructions.len() {
+    for i in 0..block.instructions.len() {
         let curr = block.instructions.get(i).unwrap();
-        let prev = block.instructions.get(i - 1).unwrap();
+        let prev = if i > 0 {
+            block.instructions.get(i - 1)
+        } else {
+            None
+        };
         let wrapped_instr = Instruction::wrap_native(*curr);
 
-        if (prev.encoding() == EncodingKind::VEX && curr.encoding() != EncodingKind::VEX)
-            || (prev.encoding() != EncodingKind::VEX && curr.encoding() == EncodingKind::VEX)
-        {
-            if !current_block.is_empty() {
-                result.push((ControlBlock::new(current_block), vec![curr.ip()]));
-                current_block = Vec::new();
+        if let Some(prev) = prev {
+            if (prev.encoding() == EncodingKind::VEX && curr.encoding() != EncodingKind::VEX)
+                || (prev.encoding() != EncodingKind::VEX && curr.encoding() == EncodingKind::VEX)
+            {
+                if !current_block.is_empty() {
+                    result.push((ControlBlock::new(current_block), vec![curr.ip()]));
+                    current_block = Vec::new();
+                }
             }
         }
 
@@ -262,41 +270,43 @@ fn create_control_blocks(block: &DecodedBlock) -> Vec<(ControlBlock, Vec<u64>)> 
 // }
 
 pub fn analyze_block(block: &DecodedBlock) -> FunctionBlock {
+    // println!("Analyzing block");
+    // block.pretty_print();
     let blocks = create_control_blocks(block);
 
-    let mut block_start_num_map = HashMap::new();
+    // let mut block_start_num_map = HashMap::new();
 
-    for i in 0..blocks.len() {
-        let block = blocks.get(i).unwrap();
-        let (first_instr, _) = block.0.instructions.first().unwrap();
-        let ip = first_instr.original_ip;
-        block_start_num_map.insert(ip, i);
-    }
+    // for i in 0..blocks.len() {
+    //     let block = blocks.get(i).unwrap();
+    //     let (first_instr, _) = block.0.instructions.first().unwrap();
+    //     let ip = first_instr.original_ip;
+    //     block_start_num_map.insert(ip, i);
+    // }
 
-    let mut edges: HashMap<usize, Vec<usize>> = HashMap::new();
+    // let mut edges: HashMap<usize, Vec<usize>> = HashMap::new();
 
-    for i in 0..blocks.len() {
-        let targets = &blocks[i].1;
-        for t in targets {
-            if !block.range.contains(t) {
-                continue;
-            }
-            let target_index = block_start_num_map.get(&t).unwrap();
+    // for i in 0..blocks.len() {
+    //     let targets = &blocks[i].1;
+    //     for t in targets {
+    //         if !block.range.contains(t) {
+    //             continue;
+    //         }
+    //         let target_index = block_start_num_map.get(&t).unwrap();
 
-            if edges.contains_key(&i) {
-                edges.get_mut(&i).unwrap().push(*target_index);
-            } else {
-                edges.insert(i, vec![*target_index]);
-            }
-        }
-    }
+    //         if edges.contains_key(&i) {
+    //             edges.get_mut(&i).unwrap().push(*target_index);
+    //         } else {
+    //             edges.insert(i, vec![*target_index]);
+    //         }
+    //     }
+    // }
 
     let control_blocks: Vec<ControlBlock> = blocks.into_iter().map(|b| b.0).collect();
 
     let fb = FunctionBlock {
         range: block.range.clone(),
         control_blocks,
-        edges,
+        // edges,
     };
 
     fb
@@ -311,7 +321,7 @@ pub fn translate_block(fb: FunctionBlock) -> FunctionBlock {
 
     FunctionBlock {
         control_blocks: cbs,
-        edges: fb.edges,
+        // edges: fb.edges,
         range: fb.range,
     }
 }

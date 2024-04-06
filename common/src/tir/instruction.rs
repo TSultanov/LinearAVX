@@ -136,6 +136,8 @@ pub enum Operand {
         scale: u32,
         displacement: u64,
     },
+    MemoryESRDI,
+    MemorySegRSI,
 }
 
 impl Operand {
@@ -166,21 +168,17 @@ impl Operand {
             | iced_x86::OpKind::Immediate8to32
             | iced_x86::OpKind::Immediate8to64
             | iced_x86::OpKind::Immediate32to64 => Operand::Immediate(instr.immediate(op)),
-            iced_x86::OpKind::MemorySegSI => todo!(),
-            iced_x86::OpKind::MemorySegESI => todo!(),
-            iced_x86::OpKind::MemorySegRSI => todo!(),
-            iced_x86::OpKind::MemorySegDI => todo!(),
-            iced_x86::OpKind::MemorySegEDI => todo!(),
-            iced_x86::OpKind::MemorySegRDI => todo!(),
-            iced_x86::OpKind::MemoryESDI => todo!(),
-            iced_x86::OpKind::MemoryESEDI => todo!(),
-            iced_x86::OpKind::MemoryESRDI => todo!(),
             iced_x86::OpKind::Memory => Operand::Memory {
                 base: instr.memory_base(),
                 index: instr.memory_index(),
                 scale: instr.memory_index_scale(),
                 displacement: instr.memory_displacement64(),
             },
+            iced_x86::OpKind::MemoryESRDI => Operand::MemoryESRDI,
+            iced_x86::OpKind::MemorySegRSI => Operand::MemorySegRSI,
+            other => {
+                panic!("Not implemented operand kind {:?} in instruction {:?} at {:#x}", other, instr.mnemonic(), instr.ip());
+            }
         })
     }
 }
@@ -239,6 +237,8 @@ impl Instruction {
                 scale: _,
                 displacement: _,
             } => false,
+            Operand::MemoryESRDI => false,
+            Operand::MemorySegRSI => false,
         })
     }
 

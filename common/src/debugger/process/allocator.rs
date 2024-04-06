@@ -62,6 +62,11 @@ impl Allocator {
 
         if let Some(base) = self.allocation_base {
             let address = base + self.allocated as u64;
+            let size = if size % 8 != 0 {
+                size + (8 - size % 8)
+            } else {
+                size
+            };
             self.allocated += size;
             if self.allocated > self.max_size {
                 Err(Box::new(AllocatorError::OutOfSpace))
@@ -84,7 +89,13 @@ impl Allocator {
                 return Ok(());
             }
 
-            self.allocated += new_size - *last_size;
+            let increase = new_size - *last_size;
+            let increase = if increase % 8 != 0 {
+                increase + (8 - increase % 8)
+            } else {
+                increase
+            };
+            self.allocated += increase;
             Ok(())
         } else {
             Err(AllocatorError::NotTheLastAllocation)

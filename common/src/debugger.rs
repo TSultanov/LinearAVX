@@ -17,10 +17,15 @@ use windows::{
 
 use self::process::{AlignedContext, Process};
 
+enum ExceptionHandlerResult {
+    W(NTSTATUS),
+    QuitDebugger,
+}
+
 pub struct DebuggerCore {
     active_processes: HashMap<u32, Process>,
     tls_allocation_awaiting: HashMap<u32, AlignedContext>,
-    tls_allocated_pids: HashSet<u32>,
+    tls_allocated_tids: HashSet<u32>,
     process_created_handler:
         Box<dyn Fn(&Process) -> core::result::Result<(), Box<dyn std::error::Error>>>,
 }
@@ -34,7 +39,7 @@ impl DebuggerCore {
         DebuggerCore {
             active_processes: HashMap::new(),
             tls_allocation_awaiting: HashMap::new(),
-            tls_allocated_pids: HashSet::new(),
+            tls_allocated_tids: HashSet::new(),
             process_created_handler,
         }
     }
@@ -129,7 +134,12 @@ impl DebuggerCore {
         false
     }
 
-    fn handle_breakpoint(&mut self, pid: u32, tid: u32, record: EXCEPTION_RECORD) -> NTSTATUS {
+    fn handle_breakpoint(
+        &mut self,
+        pid: u32,
+        tid: u32,
+        record: EXCEPTION_RECORD,
+    ) -> ExceptionHandlerResult {
         let addr = record.ExceptionAddress as u64;
         let process = self.active_processes.get_mut(&pid).unwrap();
         let thread = process.get_thread(tid).unwrap();
@@ -141,35 +151,59 @@ impl DebuggerCore {
             let canary = old_context.ctx.Rbx;
             if canary != 0xdeadf00d {
                 // TODO randomize canary
-                panic!("TLS allcoation failed: mismatched canary");
+                panic!("TLS allocation failed: mismatched canary ({:#x})", canary);
             }
             println!("TLS allocated at index {}", tls_index);
             let process = self.active_processes.get_mut(&pid).unwrap();
             process.set_tls_offset(tls_index);
+            self.tls_allocated_tids.insert(tid);
+            self.tls_allocation_awaiting.remove(&tid);
 
-            (self.process_created_handler)(process)
-                .expect("Failed to execute callback");
+            (self.process_created_handler)(process).expect("Failed to execute callback");
 
-            DBG_CONTINUE
+            ExceptionHandlerResult::W(DBG_CONTINUE)
         } else {
             if addr == process.entry_point {
                 process.breakpoint_remove(process.entry_point).unwrap();
                 println!("Set TlsAlloc execution");
                 let context = process.set_alloc_tls_execution(tid).unwrap();
                 self.tls_allocation_awaiting.insert(tid, context);
-                DBG_CONTINUE
+                ExceptionHandlerResult::W(DBG_CONTINUE)
             } else {
                 println!("Unknown breakpoint at {:#x}", addr as u64);
-                DBG_EXCEPTION_NOT_HANDLED
+                if self.tls_allocated_tids.contains(&tid) {
+                    return self.suspend_and_die(pid, tid);
+                }
+                ExceptionHandlerResult::W(DBG_EXCEPTION_NOT_HANDLED)
             }
         }
+    }
+
+    fn suspend_and_die(&self, pid: u32, tid: u32) -> ExceptionHandlerResult {
+        let process = self.active_processes.get(&pid).unwrap();
+        let context = process.get_thread(tid).unwrap().get_context().unwrap();
+        println!("RIP: {:#x}", context.ctx.Rip);
+        println!("RSP: {:#x}", context.ctx.Rsp);
+        let stack = process.read_memory(context.ctx.Rsp, 80).unwrap();
+        println!("Stack:");
+        for i in 0..10 {
+            print!("- 0x");
+            for j in 0..8 {
+                print!("{:02x}", stack[i * 8 + (7 - j)]);
+            }
+            println!();
+        }
+        process.suspend();
+        unsafe { DebugActiveProcessStop(pid) }.unwrap();
+        println!("Process suspended. Launcher detached. You can attach your debugger. Launcher will exit.");
+        return ExceptionHandlerResult::QuitDebugger;
     }
 
     fn handle_exception(
         &mut self,
         debug_ev: DEBUG_EVENT,
         exception_info: EXCEPTION_DEBUG_INFO,
-    ) -> NTSTATUS {
+    ) -> ExceptionHandlerResult {
         let exception_record = exception_info.ExceptionRecord;
         let exception_code = exception_record.ExceptionCode;
         let pid = debug_ev.dwProcessId;
@@ -177,7 +211,14 @@ impl DebuggerCore {
 
         match exception_code {
             EXCEPTION_ACCESS_VIOLATION => {
-                println!("Access violation");
+                println!(
+                    "Access violation in PID {} TID {} info {} at {:#x}",
+                    pid,
+                    tid,
+                    exception_record.ExceptionInformation[0],
+                    exception_record.ExceptionInformation[1]
+                );
+                return self.suspend_and_die(pid, tid);
             }
             EXCEPTION_BREAKPOINT => {
                 return self.handle_breakpoint(pid, tid, exception_record);
@@ -193,16 +234,17 @@ impl DebuggerCore {
             }
             EXCEPTION_ILLEGAL_INSTRUCTION => {
                 println!(
-                    "Illegal instruction in PID {} TID {}",
-                    debug_ev.dwProcessId, debug_ev.dwThreadId
+                    "Illegal instruction in PID {} TID {} at {:#x}",
+                    debug_ev.dwProcessId, debug_ev.dwThreadId, exception_record.ExceptionAddress as u64,
                 );
+                return self.suspend_and_die(pid, tid);
             }
             _ => {
                 println!("Unknown exception {:#x}", exception_code.0);
             }
         }
 
-        DBG_EXCEPTION_NOT_HANDLED
+        ExceptionHandlerResult::W(DBG_EXCEPTION_NOT_HANDLED)
     }
 
     fn handle_debug_string(&self, h_process: HANDLE, debug_string_info: OUTPUT_DEBUG_STRING_INFO) {
@@ -302,7 +344,10 @@ impl DebuggerCore {
                 EXCEPTION_DEBUG_EVENT => {
                     let exception_info = unsafe { debug_ev.u.Exception };
 
-                    dw_continue_status = self.handle_exception(debug_ev, exception_info);
+                    dw_continue_status = match self.handle_exception(debug_ev, exception_info) {
+                        ExceptionHandlerResult::W(s) => s,
+                        ExceptionHandlerResult::QuitDebugger => return,
+                    }
                 }
                 CREATE_PROCESS_DEBUG_EVENT => unsafe {
                     if self.handle_create_process(

@@ -1,10 +1,11 @@
 use std::{
+    cell::RefCell,
     collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
     error::Error,
     ops::Range,
 };
 
-use iced_x86::{CpuidFeature, FlowControl, Formatter, Instruction};
+use iced_x86::{CpuidFeature, FlowControl, Formatter, Instruction, Mnemonic};
 use intervaltree::{Element, IntervalTree};
 use itertools::Itertools;
 
@@ -143,9 +144,9 @@ pub trait Decoder {
                 },
             },
             FlowControl::XbeginXabortXend => {
-                panic!("XbeginXabortXend not supported (ID {:#x})", instr.ip());
+                panic!("XbeginXabortXend not supported (IP {:#x})", instr.ip());
             }
-            FlowControl::Exception => panic!("Exception! (ID {:#x})", instr.ip()),
+            FlowControl::Exception => Ok((DecodeContinue::Continue, None)),
         }
     }
 }
@@ -200,18 +201,19 @@ fn merge_blocks(blocks: HashMap<u64, DecodedBlock>) -> IntervalTree<u64, Decoded
     }
 
     merged_blocks.sort_by_key(|b| b.range.start);
+
     // Second pass: merge adjacent blocks if possible
 
-    let merged_blocks = if merged_blocks.len() > 1 {
+    let merged_blocks: Vec<DecodedBlock> = if merged_blocks.len() > 1 {
         merged_blocks
             .iter()
             .fold(im::Vector::new(), |acc: im::Vector<DecodedBlock>, b| {
                 if let Some(a) = acc.last() {
                     let mut acc_clone = acc.clone();
 
-                    match a.merge(b) {
+                    match a.merge(&b) {
                         MergeOrRebalanceResult::None => {
-                            acc_clone.push_back((*b).clone());
+                            acc_clone.push_back(b.clone());
                         }
                         MergeOrRebalanceResult::Single(m) => {
                             acc_clone.pop_back();
@@ -227,7 +229,7 @@ fn merge_blocks(blocks: HashMap<u64, DecodedBlock>) -> IntervalTree<u64, Decoded
                     acc_clone
                 } else {
                     let mut acc_clone = acc.clone();
-                    acc_clone.push_back((*b).clone());
+                    acc_clone.push_back(b.clone());
                     acc_clone
                 }
             })
@@ -266,7 +268,56 @@ fn merge_blocks(blocks: HashMap<u64, DecodedBlock>) -> IntervalTree<u64, Decoded
         )
     });
 
-    IntervalTree::from_iter(blocks_with_backrefs)
+    // Split blocks at backrefs
+    let split_blocks = blocks_with_backrefs.flat_map(|b| {
+        if b.references.len() > 1 {
+            let mut blocks = Vec::new();
+            let mut current_block = Vec::new();
+            let mut br_iter = b.references.iter();
+            let mut prev_branch = br_iter.next();
+            let mut curr_br = br_iter.next();
+
+            for instr in b.instructions {
+                if !current_block.is_empty()
+                    && curr_br.is_some()
+                    && curr_br.unwrap().to == instr.ip()
+                {
+                    let br = prev_branch.unwrap();
+                    blocks.push(DecodedBlock::new(
+                        match br.typ {
+                            BranchType::Jump => BlockType::Raw,
+                            BranchType::Call => BlockType::Function,
+                        },
+                        current_block.clone(),
+                        vec![*br],
+                        vec![], //b.branch_targets.clone(),
+                    ));
+                    current_block = Vec::new();
+                    prev_branch = curr_br;
+                    curr_br = br_iter.next();
+                }
+
+                current_block.push(instr);
+            }
+
+            let br = prev_branch.unwrap();
+            blocks.push(DecodedBlock::new(
+                match br.typ {
+                    BranchType::Jump => BlockType::Raw,
+                    BranchType::Call => BlockType::Function,
+                },
+                current_block.clone(),
+                vec![*br],
+                vec![], //b.branch_targets.clone(),
+            ));
+
+            blocks
+        } else {
+            vec![b]
+        }
+    });
+
+    IntervalTree::from_iter(split_blocks)
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
@@ -387,6 +438,10 @@ impl DecodedBlock {
 
         if left_block.range.end < right_block.range.start {
             return MergeOrRebalanceResult::None;
+        }
+
+        if left_block.instructions.last().unwrap().flow_control() == FlowControl::Return {
+            return MergeOrRebalanceResult::Two((*left_block).clone(), (*right_block).clone());
         }
 
         // if right_block.block_type == BlockType::Raw {
@@ -518,14 +573,12 @@ impl DecodedBlock {
 
     pub fn needs_recompiling(&self) -> bool {
         self.instructions.iter().any(|i| {
-            i.cpuid_features().iter().any(|f| {
-                match f {
-                    CpuidFeature::AVX => true,
-                    CpuidFeature::AVX2 => true,
-                    CpuidFeature::BMI1 => true,
-                    CpuidFeature::BMI2 => true,
-                    _ => false,
-                }
+            i.cpuid_features().iter().any(|f| match f {
+                CpuidFeature::AVX => true,
+                CpuidFeature::AVX2 => true,
+                CpuidFeature::BMI1 => true,
+                CpuidFeature::BMI2 => true,
+                _ => false,
             })
         })
     }

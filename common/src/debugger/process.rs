@@ -236,18 +236,39 @@ impl Process {
         asm: &mut CodeAssembler,
     ) -> Result<(), Box<dyn Error>> {
         // 1. Alloc initial amount of memory for new code
-        let size_guess = (code_range.end - code_range.start) as usize;
+        let func_size = (code_range.end - code_range.start) as usize;
         println!(
             "For function at {:#x} (len {}):",
-            code_range.start, size_guess,
+            code_range.start, func_size,
         );
-        let base = self.allocator.borrow_mut().allocate(size_guess)?;
+        let base = self.allocator.borrow_mut().allocate(func_size)?;
+
+        let mut trampoline_asm = CodeAssembler::new(64)?;
+        trampoline_asm.jmp(base)?;
+        trampoline_asm.int3()?;
+        trampoline_asm.int3()?;
+
+        let mut trampoline = trampoline_asm.assemble(code_range.start)?;
+
+        if trampoline.len() > func_size {
+            return Ok(());
+        }
+
+        for _ in 0..(func_size - trampoline.len()) {
+            trampoline.push(0xcc);
+        }
 
         // 2. Assemble new code with the new allocation start as a base address
+        // in case block is not ending with RET, jump back past the end of the original code
+        asm.nop()?;
+        asm.nop()?;
+        asm.jmp(code_range.end)?;
+        asm.int3()?;
+        asm.int3()?;
         let assembled_block = asm.assemble(base)?;
 
         // 3. Bump allocated amount if necessary
-        if assembled_block.len() > size_guess {
+        if assembled_block.len() > func_size {
             self.allocator
                 .borrow_mut()
                 .allocation_increase(base, assembled_block.len())?
@@ -262,12 +283,6 @@ impl Process {
         );
 
         // 5. Set up trampoline
-        let mut trampoline_asm = CodeAssembler::new(64)?;
-        trampoline_asm.jmp(base)?;
-        trampoline_asm.int3()?;
-        trampoline_asm.int3()?;
-
-        let trampoline = trampoline_asm.assemble(code_range.start)?;
         self.write_memory(code_range.start, &trampoline)?;
 
         println!(
