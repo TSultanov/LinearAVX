@@ -1,19 +1,18 @@
-use common::{
-    compiler::{analyze_block, translate_block}, debugger::{process::Process, DebuggerCore}, decoder::{
-        base::{BlockType, Decoder},
-        process::ProcessDecoder,
-    }, tir::assembler::assemble
-};
 use std::{env, error::Error, mem::MaybeUninit};
+
 use windows::{
     core::{HSTRING, PWSTR},
     Win32::{
         Foundation::CloseHandle,
-        System::{
-            Diagnostics::Debug::CREATE_PROCESS_DEBUG_INFO,
-            Threading::{CreateProcessW, DEBUG_PROCESS, STARTUPINFOW},
-        },
+        System::Threading::{CreateProcessW, DEBUG_PROCESS, STARTUPINFOW},
     },
+};
+
+use common::{
+    compiler::analyze_block, debugger::{DebuggerCore, process::Process}, decoder::{
+        base::Decoder,
+        process::ProcessDecoder,
+    }, tir::assembler::assemble
 };
 
 fn main() {

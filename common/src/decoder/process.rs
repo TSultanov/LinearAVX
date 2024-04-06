@@ -1,8 +1,9 @@
 use std::error::Error;
 
 use crate::debugger::process::Process;
+use crate::decoder::decoded_block::DecodedBlock;
 
-use super::base::{Branch, DecodeContinue, DecodedBlock, Decoder};
+use super::base::{Branch, DecodeContinue, Decoder};
 
 pub struct ProcessDecoder<'a> {
     bitness: u32,

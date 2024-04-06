@@ -1,6 +1,7 @@
 use std::error::Error;
+use crate::decoder::decoded_block::DecodedBlock;
 
-use super::base::{BlockType, Branch, DecodeContinue, DecodedBlock, Decoder};
+use super::base::{BlockType, Branch, DecodeContinue, Decoder};
 
 pub struct TextDecoder<'a> {
     pub base_address: u64,

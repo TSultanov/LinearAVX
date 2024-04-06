@@ -69,7 +69,6 @@ impl MemoryInfo {
         } else {
             suitable.BaseAddress as u64
         };
-        println!("Distance: {}", base_addr.abs_diff(starting_at));
         base_addr
     }
 }

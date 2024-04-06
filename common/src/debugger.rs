@@ -1,21 +1,23 @@
 use std::{collections::HashMap, mem::MaybeUninit, ptr::addr_of_mut};
 pub mod process;
+mod thread;
 
 use im::HashSet;
 use windows::{
     core::*,
     Win32::{
         Foundation::*,
-        Storage::FileSystem::{GetFinalPathNameByHandleW, FILE_NAME_NORMALIZED},
+        Storage::FileSystem::{FILE_NAME_NORMALIZED, GetFinalPathNameByHandleW},
         System::{
             Diagnostics::Debug::*,
             SystemInformation::IMAGE_FILE_MACHINE_AMD64,
-            Threading::{OpenProcess, INFINITE, PROCESS_ALL_ACCESS},
+            Threading::{INFINITE, OpenProcess, PROCESS_ALL_ACCESS},
         },
     },
 };
+use thread::AlignedContext;
 
-use self::process::{AlignedContext, Process};
+use self::process::Process;
 
 enum ExceptionHandlerResult {
     W(NTSTATUS),

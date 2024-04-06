@@ -3,10 +3,8 @@ use std::collections::{HashMap, HashSet};
 use iced_x86::EncodingKind;
 use itertools::Itertools;
 
-use crate::{
-    decoder::base::DecodedBlock,
-    tir::{Instruction, Register, RegisterValue},
-};
+use crate::tir::{Instruction, Register, RegisterValue};
+use crate::decoder::decoded_block::DecodedBlock;
 
 #[derive(Debug)]
 pub struct RegisterUse {
@@ -332,7 +330,6 @@ fn translate_control_block(cb: &ControlBlock) -> ControlBlock {
         .iter()
         .flat_map(|(i, _)| i.map())
         .flat_map(|i| i.detect_high_loads())
-        // .map(|(i, _)| i.clone())
         .collect();
     ControlBlock::new(instructions_no_ymm)
 }
@@ -355,4 +352,3 @@ fn translate_control_block(cb: &ControlBlock) -> ControlBlock {
 //     }
 // }
 
-pub fn compile_block(fb: &FunctionBlock) {}

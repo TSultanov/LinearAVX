@@ -6,73 +6,33 @@ use std::{
     collections::HashMap,
     error::Error,
     ffi::c_void,
-    mem::{size_of, MaybeUninit},
+    mem::{MaybeUninit, size_of},
     ops::Range,
     ptr::addr_of_mut,
 };
 
-use iced_x86::code_asm::{ebx, rax, CodeAssembler};
+use iced_x86::code_asm::{CodeAssembler, ebx, rax};
 use windows::{
     core::{HSTRING, PCSTR},
     Win32::{
         Foundation::HANDLE,
         System::{
             Diagnostics::Debug::{
-                FlushInstructionCache, GetThreadContext, ReadProcessMemory, SetThreadContext,
-                WriteProcessMemory, CONTEXT, CONTEXT_ALL_AMD64, CREATE_PROCESS_DEBUG_INFO,
-                CREATE_THREAD_DEBUG_INFO,
+                CREATE_PROCESS_DEBUG_INFO,
+                CREATE_THREAD_DEBUG_INFO, FlushInstructionCache, ReadProcessMemory,
+                WriteProcessMemory,
             },
             LibraryLoader::{GetModuleHandleW, GetProcAddress},
             Threading::{
-                GetProcessId, GetProcessInformation, GetThreadId, ProcessMachineTypeInfo,
-                ResumeThread, SuspendThread, PROCESS_MACHINE_INFORMATION,
+                GetProcessId, GetProcessInformation, GetThreadId, PROCESS_MACHINE_INFORMATION
+                , ProcessMachineTypeInfo,
             },
         },
     },
 };
+use crate::debugger::thread::{AlignedContext, Thread};
 
 use self::{allocator::Allocator, memory_info::MemoryInfo};
-
-pub struct Thread {
-    pub tid: u32,
-    h_thread: HANDLE,
-}
-
-impl Thread {
-    pub fn new(thread_info: &CREATE_THREAD_DEBUG_INFO) -> Thread {
-        let tid = unsafe { GetThreadId(thread_info.hThread) };
-
-        Thread {
-            tid: tid,
-            h_thread: thread_info.hThread,
-        }
-    }
-
-    pub fn suspend(&self) {
-        unsafe { SuspendThread(self.h_thread) };
-    }
-
-    pub fn resume(&self) {
-        unsafe { ResumeThread(self.h_thread) };
-    }
-
-    pub fn get_context(&self) -> Result<AlignedContext, Box<dyn Error>> {
-        let mut ctx = AlignedContext::default();
-        ctx.ctx.ContextFlags = CONTEXT_ALL_AMD64;
-        unsafe { GetThreadContext(self.h_thread, &mut ctx.ctx)? };
-        Ok(ctx)
-    }
-
-    pub fn set_context(&self, context: &AlignedContext) -> Result<(), windows::core::Error> {
-        unsafe { SetThreadContext(self.h_thread, &context.ctx) }
-    }
-}
-
-#[repr(align(16))]
-#[derive(Default, Clone)]
-pub struct AlignedContext {
-    pub ctx: CONTEXT,
-}
 
 pub struct Process {
     pub pid: u32,
@@ -96,7 +56,7 @@ impl Process {
         threads.insert(
             tid,
             Thread {
-                tid: tid,
+                tid,
                 h_thread: process_info.hThread,
             },
         );
@@ -117,11 +77,11 @@ impl Process {
         let memory_info = MemoryInfo::new(process_info.hProcess);
 
         Process {
-            pid: pid,
+            pid,
             base_address: process_info.lpBaseOfImage as u64,
             entry_point: process_info.lpStartAddress.unwrap() as u64,
             h_process: process_info.hProcess,
-            threads: threads,
+            threads,
             tls_offset: None,
             machine_info: mi,
             breakpoints: HashMap::new(),
@@ -131,7 +91,7 @@ impl Process {
                     .get_nearest_free(process_info.lpBaseOfImage as u64, max_code_alloc_size),
                 max_code_alloc_size,
             )),
-            memory_info: memory_info,
+            memory_info,
         }
     }
 
@@ -306,7 +266,7 @@ fn jit_tls_alloc(base_addr: u64) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut a = CodeAssembler::new(64)?;
     a.mov(rax, proc_address)?; // 10B
     a.call(rax)?; // 2B
-    a.mov(ebx, 0xdeadf00d as u32)?; // 5B
+    a.mov(ebx, 0xdeadf00du32)?; // 5B
     a.int3()?; // 1B
     a.int3()?; // 1B
     a.int3()?; // 1B

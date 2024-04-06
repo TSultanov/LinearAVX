@@ -32,7 +32,7 @@ pub fn assemble_instruction(
     match i.target_mnemonic {
         super::Mnemonic::Real(m) => match i.original_instr {
             Some(original_instr) => {
-                let mut instr = original_instr.clone();
+                let instr = original_instr.clone();
                 a.add_instruction(instr)
             }
             None => assemble_translated(a, m, i),
@@ -78,15 +78,6 @@ fn assemble_translated(
                 )?)?),
                 super::Register::Virtual(_) => todo!(),
             },
-            (
-                super::Operand::Memory {
-                    base,
-                    index,
-                    scale,
-                    displacement,
-                },
-                super::Operand::Register(_),
-            ) => todo!(),
             _ => {
                 todo!()
             }
